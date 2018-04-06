@@ -1,18 +1,5 @@
 from requests_html import HTMLSession
-from maps_api.request import geocoder_request
-from maps_api.geocoder import get_address, get_components
-
-
-def get_city(data):
-    address = get_address(data)
-
-    data = geocoder_request(geocode=address, lang='en_US', format='json')
-    components = get_components(data)
-    if components is not None:
-        for component in components[::-1]:
-            if component['kind'] in ('province', 'locality'):
-                return component['name']
-    return None
+from maps_api.geocoder import get_city
 
 
 def parse_news(data):

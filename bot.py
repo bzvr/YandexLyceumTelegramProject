@@ -4,15 +4,17 @@ from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMar
 from time import sleep
 
 from maps_api.request import geocoder_request, map_request
-from maps_api.geocoder import get_pos, get_bbox
+from maps_api.geocoder import get_pos, get_bbox, get_country_code, get_city, check_response
 
 from news_parser.parser import parse_news
+
+from weather.weather import get_current_weather
 
 from speech_analyze import speech_analyze
 from xml_parser import speech_parser
 from convert import convert
 
-from config import TELEGRAM_TOKEN, SPEECH_TOKEN, CONVERT_TOKEN
+from config import TELEGRAM_TOKEN, SPEECH_TOKEN, CONVERT_TOKEN, WEATHER_TOKEN
 
 import logging
 
@@ -28,6 +30,7 @@ reply_markup2 = ReplyKeyboardMarkup(
     [
         ['Показать на карте'],
         ['Последние новости'],
+        ['Погода'],
         ['Вернуться назад']
     ])
 
@@ -75,7 +78,7 @@ def enter_location(bot, update, user_data):
 
 def idle(bot, update, user_data):
     response = geocoder_request(geocode=update.message.text, format='json')
-    if response:
+    if check_response(response):
         update.message.reply_text(
             'Найдено местоположение',
             reply_markup=reply_markup2
@@ -94,7 +97,8 @@ def voice_to_text(bot, update, user_data):
 
     text = speech_parser(response)
     data = geocoder_request(geocode=text, format='json')
-    if data:
+
+    if check_response(data):
         update.message.reply_text(
             'Найдено местоположение',
             reply_markup=reply_markup2
@@ -135,7 +139,9 @@ def location_handler(bot, update, user_data):
             sleep(1)
         else:
             update.message.reply_text('Новостей для этой местности не найдено')
-
+    elif text == 'Погода':
+        city, code = get_city(user_data['current_response'], 'ru-RU'), get_country_code(user_data['current_response'])
+        update.message.reply_text(get_current_weather(city, code, WEATHER_TOKEN))
     elif text == 'Вернуться назад':
         update.message.reply_text('Введите какое-либо местоположение', reply_markup=ReplyKeyboardRemove())
         return IDLE

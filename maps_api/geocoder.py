@@ -12,14 +12,27 @@ def get_components(data):
         return None
 
 
-def get_city(geocode, lang='ru_RU'):
-    data = geocoder_request(geocode=geocode, lang=lang, format='json')
+def get_city(data, lang='en_US'):
+    address = get_address(data)
+
+    data = geocoder_request(geocode=address, lang=lang, format='json')
     components = get_components(data)
     if components is not None:
         for component in components[::-1]:
             if component['kind'] in ('province', 'locality'):
                 return component['name']
     return None
+
+
+def get_country_code(data):
+    try:
+        for i in ['response', 'GeoObjectCollection', 'featureMember',
+                  0, 'GeoObject', 'metaDataProperty', 'GeocoderMetaData',
+                  'Address', 'country_code']:
+            data = data[i]
+        return data
+    except (IndexError, KeyError):
+        return None
 
 
 def get_address(data):
@@ -58,3 +71,12 @@ def get_bbox(data):
             elif points[i] < -180:
                 points[i] = -180
     return points
+
+
+def check_response(data):
+    found = data
+    for i in ['response', 'GeoObjectCollection', 'metaDataProperty', 'GeocoderResponseMetaData',
+              'found']:
+        found = found[i]
+    print(found)
+    return int(found)
