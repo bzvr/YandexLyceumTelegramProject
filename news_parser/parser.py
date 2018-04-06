@@ -25,7 +25,7 @@ def parse_news(data):
         print('page gotten')
         html = response.html.find(selectors[0])[1]
 
-        stories = html.find(selectors[1])[:5]
+        stories = html.find(selectors[1])
 
         news = []
         for story in stories:
@@ -42,7 +42,7 @@ def parse_news(data):
         return None
 
 
-url = 'https://news.yandex.ru/{}/index.html?from=index'
+url = 'https://news.yandex.ru/{}'
 
 selectors = [(
     'body > div.rubber.rubber_content '

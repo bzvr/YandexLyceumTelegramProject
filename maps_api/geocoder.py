@@ -45,5 +45,16 @@ def get_bbox(data):
     for i in ['response', 'GeoObjectCollection', 'featureMember',
               0, 'GeoObject', 'boundedBy', 'Envelope']:
         envelope = envelope[i]
-
-    return list(map(float, envelope['lowerCorner'].split())) + list(map(float, envelope['upperCorner'].split()))
+    points = list(map(float, envelope['lowerCorner'].split())) + list(map(float, envelope['upperCorner'].split()))
+    for i in range(len(points)):
+        if i % 2 == 1:
+            if points[i] > 90:
+                points[i] = 90
+            elif points[i] < -90:
+                points[i] = -90
+        else:
+            if points[i] > 180:
+                points[i] = 180
+            elif points[i] < -180:
+                points[i] = -180
+    return points
