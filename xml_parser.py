@@ -1,7 +1,7 @@
 import xml.etree.ElementTree as XmlElementTree
 
 
-def parser(response):
+def speech_parser(response):
     if response:
         response_text = response.text
         xml = XmlElementTree.fromstring(response_text)
