@@ -2,6 +2,7 @@ from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHa
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 
 from time import sleep
+import requests
 
 from maps_api.request import geocoder_request, map_request
 from maps_api.geocoder import get_pos, get_bbox, get_country_code, get_city, check_response
@@ -10,11 +11,10 @@ from news_parser.parser import parse_news
 
 from weather.weather import get_current_weather
 
-from speech_analyze import speech_analyze
-from xml_parser import speech_parser
-from convert import convert
+from speech_api.speech_analyze import speech_analyze
+from speech_api.xml_parser import speech_parser
 
-from config import TELEGRAM_TOKEN, SPEECH_TOKEN, CONVERT_TOKEN, WEATHER_TOKEN
+from config import TELEGRAM_TOKEN, SPEECH_TOKEN, WEATHER_TOKEN
 
 import logging
 
@@ -32,18 +32,22 @@ reply_markup2 = ReplyKeyboardMarkup(
         ['Последние новости'],
         ['Погода'],
         ['Вернуться назад']
-    ])
+    ]
+)
 
 inline_markup1 = InlineKeyboardMarkup(
     [[InlineKeyboardButton('Следующая новость', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
 
-inline_markup2 = InlineKeyboardMarkup([[InlineKeyboardButton('Следующая новость', callback_data=1)],
-                                       [InlineKeyboardButton('Предыдущая новость', callback_data=2)],
-                                       [InlineKeyboardButton('Назад', callback_data=3)]])
+inline_markup2 = InlineKeyboardMarkup([
+    [InlineKeyboardButton('Следующая новость', callback_data=1)],
+    [InlineKeyboardButton('Предыдущая новость', callback_data=2)],
+    [InlineKeyboardButton('Назад', callback_data=3)]
+])
 
-inline_markup3 = InlineKeyboardMarkup(
-    [[InlineKeyboardButton('Предыдущая новость', callback_data=2)], [InlineKeyboardButton('Назад', callback_data=3)]
-     ])
+inline_markup3 = InlineKeyboardMarkup([
+    [InlineKeyboardButton('Предыдущая новость', callback_data=2)],
+    [InlineKeyboardButton('Назад', callback_data=3)]
+])
 
 
 def start(bot, update):
@@ -93,7 +97,8 @@ def idle(bot, update, user_data):
 
 def voice_to_text(bot, update, user_data):
     voice = update.message.voice.get_file()
-    response = speech_analyze(SPEECH_TOKEN, convert(CONVERT_TOKEN, voice.file_path))
+    file = requests.get(voice.file_path).content
+    response = speech_analyze(SPEECH_TOKEN, file)
 
     text = speech_parser(response)
     data = geocoder_request(geocode=text, format='json')
@@ -208,8 +213,10 @@ conversation_handler = ConversationHandler(
             MessageHandler(Filters.voice, voice_to_text, pass_user_data=True)
         ],
 
-        LOCATION_HANDLER: [MessageHandler(Filters.text, location_handler, pass_user_data=True),
-                           CallbackQueryHandler(scrolling_news, pass_user_data=True)]
+        LOCATION_HANDLER: [
+            MessageHandler(Filters.text, location_handler, pass_user_data=True),
+            CallbackQueryHandler(scrolling_news, pass_user_data=True)
+        ]
     },
 
     fallbacks=[CommandHandler('stop', stop)]
