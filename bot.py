@@ -11,8 +11,8 @@ from news_parser.parser import parse_news
 
 from weather.weather import get_current_weather
 
-from speech_analyze import speech_analyze
-from xml_parser import speech_parser
+from speech_api.speech_analyze import speech_analyze
+from speech_api.xml_parser import speech_parser
 
 from config import TELEGRAM_TOKEN, SPEECH_TOKEN, WEATHER_TOKEN
 
