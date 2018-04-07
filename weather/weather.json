@@ -1,0 +1,53 @@
+{
+  "response": {
+    "GeoObjectCollection": {
+      "metaDataProperty": {
+        "GeocoderResponseMetaData": {
+          "request": "россия",
+          "found": "1",
+          "results": "10"
+        }
+      },
+      "featureMember": [
+        {
+          "GeoObject": {
+            "metaDataProperty": {
+              "GeocoderMetaData": {
+                "kind": "country",
+                "text": "Россия",
+                "precision": "other",
+                "Address": {
+                  "country_code": "RU",
+                  "formatted": "",
+                  "Components": [
+                    {
+                      "kind": "country",
+                      "name": "Россия"
+                    }
+                  ]
+                },
+                "AddressDetails": {
+                  "Country": {
+                    "AddressLine": "",
+                    "CountryNameCode": "RU",
+                    "CountryName": "Россия"
+                  }
+                }
+              }
+            },
+            "name": "Россия",
+            "boundedBy": {
+              "Envelope": {
+                "lowerCorner": "19.484764 41.18599",
+                "upperCorner": "191.128003 81.886117"
+              }
+            },
+            "Point": {
+              "pos": "99.505405 61.698653"
+            }
+          }
+        }
+      ]
+    }
+  }
+}
