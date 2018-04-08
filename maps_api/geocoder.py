@@ -21,6 +21,7 @@ def get_city(data, lang='en_US'):
         for component in components[::-1]:
             if component['kind'] in ('province', 'locality'):
                 return component['name']
+
     return None
 
 
@@ -32,6 +33,7 @@ def get_country_code(data):
             data = data[i]
         return data
     except (IndexError, KeyError):
+        print('aue')
         return None
 
 

@@ -1,11 +1,11 @@
 from telegram.ext import Updater, CommandHandler, ConversationHandler, MessageHandler, Filters, CallbackQueryHandler
 from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove, InlineKeyboardMarkup, InlineKeyboardButton
 
-from time import sleep
 import requests
 
 from maps_api.request import geocoder_request, map_request
 from maps_api.geocoder import get_pos, get_bbox, get_country_code, get_city, check_response
+from maps_api.static import get_static_map
 
 from news_parser.parser import parse_news
 
@@ -25,22 +25,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-reply_markup1 = ReplyKeyboardMarkup([['Пропустить']])
-reply_markup2 = ReplyKeyboardMarkup(
-    [
-        ['Показать на карте'],
-        ['Последние новости'],
-        ['Погода'],
-        ['Вернуться назад']
-    ]
-)
+keyboard1 = [['Пропустить']]
+keyboard2 = [['Показать на карте'], ['Последние новости'], ['Погода'], ['Вернуться назад']]
+keyboard3 = [['Вернуться назад']]
 
 inline_markup1 = InlineKeyboardMarkup(
     [[InlineKeyboardButton('Следующая новость', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
 
 inline_markup2 = InlineKeyboardMarkup([
-    [InlineKeyboardButton('Следующая новость', callback_data=1)],
-    [InlineKeyboardButton('Предыдущая новость', callback_data=2)],
+    [InlineKeyboardButton('Предыдущая новость', callback_data=2),
+     InlineKeyboardButton('Следующая новость', callback_data=1)],
     [InlineKeyboardButton('Назад', callback_data=3)]
 ])
 
@@ -49,10 +43,16 @@ inline_markup3 = InlineKeyboardMarkup([
     [InlineKeyboardButton('Назад', callback_data=3)]
 ])
 
+inline_markup4 = InlineKeyboardMarkup([
+    [InlineKeyboardButton('Карта', callback_data='map')],
+    [InlineKeyboardButton('Спутник', callback_data='sat')],
+    [InlineKeyboardButton('Гибрид', callback_data='sat,skl')],
+])
+
 
 def start(bot, update):
     update.message.reply_text(
-        'Введите свое имя', reply_markup=reply_markup1, one_time_keyboard=False)
+        'Введите свое имя', reply_markup=ReplyKeyboardMarkup(keyboard1), one_time_keyboard=False)
 
     return ENTER_NAME
 
@@ -72,6 +72,7 @@ def enter_location(bot, update, user_data):
     location = update.message.text
     if location != 'Пропустить':
         user_data['location'] = location
+
     else:
         user_data['location'] = None
 
@@ -85,7 +86,7 @@ def idle(bot, update, user_data):
     if check_response(response):
         update.message.reply_text(
             'Найдено местоположение',
-            reply_markup=reply_markup2
+            reply_markup=ReplyKeyboardMarkup(keyboard2)
         )
 
         user_data['current_response'] = response
@@ -106,10 +107,10 @@ def voice_to_text(bot, update, user_data):
     if check_response(data):
         update.message.reply_text(
             'Найдено местоположение',
-            reply_markup=reply_markup2
+            reply_markup=ReplyKeyboardMarkup(keyboard2)
         )
         update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
-                                  reply_markup=reply_markup2)
+                                  reply_markup=ReplyKeyboardMarkup(keyboard2))
 
         user_data['current_response'] = data
         return LOCATION_HANDLER
@@ -121,15 +122,9 @@ def voice_to_text(bot, update, user_data):
 def location_handler(bot, update, user_data):
     text = update.message.text
     if text == 'Показать на карте':
-        pos = get_pos(user_data['current_response'])
-        bbox = get_bbox(user_data['current_response'])
-        url = map_request(
-            ll='{},{}'.format(*pos),
-            bbox='{},{}~{},{}'.format(*bbox),
-            pt='{},{},pm2rdm'.format(*pos),
-            l='map'
-        )
-        update.message.reply_photo(photo=url)
+        res = "[​​​​​​​​​​​]({}){}".format(get_static_map(user_data),
+                                           'Карта для города ' + get_city(user_data['current_response'], 'ru-RU'))
+        update.message.reply_text(res, parse_mode='markdown', reply_markup=inline_markup4)
 
     elif text == 'Последние новости':
         news = parse_news(user_data['current_response'])
@@ -141,12 +136,16 @@ def location_handler(bot, update, user_data):
                                       reply_markup=ReplyKeyboardRemove())
             update.message.reply_text('*{0}*\n{1}\n[Подробнее:]({2})'.format(*news[0]), parse_mode='markdown',
                                       reply_markup=inline_markup1)
-            sleep(1)
+            return NEWS_HANDLER
+
         else:
             update.message.reply_text('Новостей для этой местности не найдено')
+
     elif text == 'Погода':
-        city, code = get_city(user_data['current_response'], 'ru-RU'), get_country_code(user_data['current_response'])
-        update.message.reply_text(get_current_weather(city, code, WEATHER_TOKEN))
+        city, code = get_city(user_data['current_response']), get_country_code(user_data['current_response'])
+        update.message.reply_text(
+            get_current_weather(city, code, WEATHER_TOKEN, get_city(user_data['current_response'], 'ru-RU')))
+
     elif text == 'Вернуться назад':
         update.message.reply_text('Введите какое-либо местоположение', reply_markup=ReplyKeyboardRemove())
         return IDLE
@@ -159,13 +158,15 @@ def scrolling_news(bot, update, user_data):
     d = {0: inline_markup1, user_data['length'] - 1: inline_markup3}
     if query.data == '1':
         user_data['index'] = min(user_data['length'], user_data['index'] + 1)
+
     elif query.data == '2':
         user_data['index'] = max(0, user_data['index'] - 1)
-    else:
+
+    elif query.data == '3':
         bot.deleteMessage(chat_id=query.message.chat_id,
                           message_id=query.message.message_id)
         bot.send_message(query.message.chat_id, 'Выберите одну из возможных функций для данного местоположения:',
-                         reply_markup=reply_markup2)
+                         reply_markup=ReplyKeyboardMarkup(keyboard2))
 
         return LOCATION_HANDLER
     try:
@@ -176,8 +177,24 @@ def scrolling_news(bot, update, user_data):
     except IndexError:
         if user_data['index'] < 0:
             user_data['index'] = 0
+
         else:
             user_data['index'] = user_data['length'] - 1
+
+
+def choosing_map_type(bot, update, user_data):
+    query = update.callback_query
+    bot.edit_message_text(chat_id=query.message.chat_id, message_id=query.message.message_id,
+                          text="[​​​​​​​​​​​]({}){}".format(get_static_map(user_data, query.data),
+                                                            'Карта для города ' + get_city(
+                                                                user_data['current_response'], 'ru-RU')),
+                          parse_mode='markdown', reply_markup=inline_markup4)
+
+
+def enter_the_map(bot, update):
+    text = update.message.text
+    if text == 'Вернуться назад':
+        return LOCATION_HANDLER
 
 
 def stop(bot, update):
@@ -199,7 +216,7 @@ def main():
     updater.idle()
 
 
-ENTER_NAME, ENTER_LOCATION, IDLE, LOCATION_HANDLER = range(4)
+ENTER_NAME, ENTER_LOCATION, IDLE, LOCATION_HANDLER, MAP_HANDLER, NEWS_HANDLER = range(6)
 
 conversation_handler = ConversationHandler(
     entry_points=[CommandHandler('start', start)],
@@ -215,6 +232,11 @@ conversation_handler = ConversationHandler(
 
         LOCATION_HANDLER: [
             MessageHandler(Filters.text, location_handler, pass_user_data=True),
+            CallbackQueryHandler(choosing_map_type, pass_user_data=True),
+
+        ],
+
+        NEWS_HANDLER: [
             CallbackQueryHandler(scrolling_news, pass_user_data=True)
         ]
     },
