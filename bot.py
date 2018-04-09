@@ -9,7 +9,7 @@ from maps_api.static import get_static_map
 
 from news_parser.parser import parse_news
 
-from weather.weather import get_current_weather
+from weather.weather import get_current_weather, get_forecast_weather
 
 from speech_api.speech_analyze import speech_analyze
 from speech_api.xml_parser import speech_parser
@@ -28,6 +28,7 @@ logger.setLevel(logging.DEBUG)
 keyboard1 = [['Пропустить']]
 keyboard2 = [['Показать на карте'], ['Последние новости'], ['Погода'], ['Вернуться назад']]
 keyboard3 = [['Вернуться назад']]
+keyboard4 = [['Текущая погода'], ['Прогноз на 6 дней'], ['Вернуться назад']]
 
 inline_markup1 = InlineKeyboardMarkup(
     [[InlineKeyboardButton('Следующая новость', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
@@ -142,9 +143,10 @@ def location_handler(bot, update, user_data):
             update.message.reply_text('Новостей для этой местности не найдено')
 
     elif text == 'Погода':
-        city, code = get_city(user_data['current_response']), get_country_code(user_data['current_response'])
         update.message.reply_text(
-            get_current_weather(city, code, WEATHER_TOKEN, get_city(user_data['current_response'], 'ru-RU')))
+            'Что вы хотите узнать о погоде в городе {}?'.format(get_city(user_data['current_response'], 'ru-RU')),
+            reply_markup=ReplyKeyboardMarkup(keyboard4))
+        return WEATHER_HANDLER
 
     elif text == 'Вернуться назад':
         update.message.reply_text('Введите какое-либо местоположение', reply_markup=ReplyKeyboardRemove())
@@ -197,6 +199,24 @@ def enter_the_map(bot, update):
         return LOCATION_HANDLER
 
 
+def weather(bot, update, user_data):
+    text = update.message.text
+
+    if text == 'Текущая погода':
+        city, code = get_city(user_data['current_response']), get_country_code(user_data['current_response'])
+        update.message.reply_text(
+            get_current_weather(city, code, WEATHER_TOKEN, get_city(user_data['current_response'], 'ru-RU')))
+    elif text == 'Прогноз на 6 дней':
+        city, code = get_city(user_data['current_response']), get_country_code(user_data['current_response'])
+        update.message.reply_text(
+            get_forecast_weather(city, code, WEATHER_TOKEN, get_city(user_data['current_response'], 'ru-RU')))
+    elif text == 'Вернуться назад':
+        update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard2))
+
+        return LOCATION_HANDLER
+
+
 def stop(bot, update):
     update.message.reply_text('Бля конец')
     return ConversationHandler.END
@@ -216,7 +236,7 @@ def main():
     updater.idle()
 
 
-ENTER_NAME, ENTER_LOCATION, IDLE, LOCATION_HANDLER, MAP_HANDLER, NEWS_HANDLER = range(6)
+ENTER_NAME, ENTER_LOCATION, IDLE, LOCATION_HANDLER, NEWS_HANDLER, WEATHER_HANDLER = range(6)
 
 conversation_handler = ConversationHandler(
     entry_points=[CommandHandler('start', start)],
@@ -238,7 +258,11 @@ conversation_handler = ConversationHandler(
 
         NEWS_HANDLER: [
             CallbackQueryHandler(scrolling_news, pass_user_data=True)
+        ],
+        WEATHER_HANDLER: [
+            MessageHandler(Filters.text, weather, pass_user_data=True)
         ]
+
     },
 
     fallbacks=[CommandHandler('stop', stop)]
