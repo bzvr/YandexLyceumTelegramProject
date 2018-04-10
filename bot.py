@@ -15,6 +15,7 @@ from speech_api.speech_analyze import speech_analyze
 from speech_api.xml_parser import speech_parser
 
 from headhunter_api.suggestions import specialization_suggest, keywords_suggest, region_suggest
+from headhunter_api import vacancies_request, full_vacancy_request
 
 from config import TELEGRAM_TOKEN, SPEECH_TOKEN, WEATHER_TOKEN
 
@@ -394,6 +395,7 @@ def voice_to_text(bot, update, user_data):
 
 def location_handler(bot, update, user_data):
     text = update.message.text
+
     if text == 'Показать на карте':
         pos = get_pos(user_data['current_response'])
         bbox = get_bbox(user_data['current_response'])
@@ -424,13 +426,148 @@ def location_handler(bot, update, user_data):
         update.message.reply_text(get_current_weather(city, code, WEATHER_TOKEN))
 
     elif text == 'Вакансии':
-        update.message.reply_text('Функция не реализована')
+        try:
+            data = geocoder_request(geocode=get_city(user_data['current_response']), format='json')
+            city = get_city(data, 'ru_RU')
+            region = list(region_suggest(city).items())[0][1]
+
+            user_data['vacancies_response'] = vacancies_request(area=region)['items']
+            user_data['vacancies_index'] = 0
+            user_data['vacancies_image'] = 'location'
+
+            update.message.reply_text('Найдено несколько вакансий', reply_markup=ReplyKeyboardRemove())
+            update.message.reply_text(
+                form_vacancy_reply(user_data),
+                parse_mode='markdown',
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton('Следующая вакансия', callback_data=1)],
+                    [InlineKeyboardButton('Местоположение', callback_data=4)],
+                    [InlineKeyboardButton('Назад', callback_data=3)]
+                ])
+            )
+
+            return VACANCIES_HANDLER
+
+        except Exception as e:
+            print(e)
 
     elif text == 'Вернуться назад':
         update.message.reply_text('Введите какое-либо местоположение', reply_markup=ReplyKeyboardRemove())
         return SEARCH_HANDLER
 
     return LOCATION_HANDLER
+
+
+def scrolling_vacancy(bot, update, user_data):
+    query = update.callback_query
+    try:
+        if query.data == '1':
+            if user_data['vacancies_index'] != len(user_data['vacancies_response']) - 1:
+                user_data['vacancies_index'] += 1
+
+        elif query.data == '2':
+            if user_data['vacancies_index'] != 0:
+                user_data['vacancies_index'] -= 1
+
+        elif query.data == '3':
+            bot.deleteMessage(
+                chat_id=query.message.chat_id,
+                message_id=query.message.message_id
+            )
+
+            bot.send_message(
+                query.message.chat_id,
+                'Выберите одну из возможных функций для данного местоположения:',
+                reply_markup=reply_markup2
+            )
+
+            return LOCATION_HANDLER
+
+        elif query.data == '4':
+            user_data['vacancies_image'] = 'location'
+
+        elif query.data == '5':
+            user_data['vacancies_image'] = 'logo'
+
+        keyboard = [
+            [],
+            [],
+            [InlineKeyboardButton('Назад', callback_data=3)]
+        ]
+
+        if user_data['vacancies_index'] != 0:
+            keyboard[0].append(InlineKeyboardButton(
+                'Предыдущая вакансия', callback_data=2
+            ))
+
+        if user_data['vacancies_index'] != len(user_data['vacancies_response']) - 1:
+            keyboard[0].append(InlineKeyboardButton(
+                'Следующая вакансия', callback_data=1
+            ))
+
+        if user_data['vacancies_image'] == 'location':
+            keyboard[1].append(InlineKeyboardButton('Логотип', callback_data=5))
+        else:
+            keyboard[1].append(InlineKeyboardButton('Местоположение', callback_data=4))
+
+        bot.edit_message_text(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id,
+            text=form_vacancy_reply(user_data, user_data['vacancies_image'] == 'location'),
+            reply_markup=InlineKeyboardMarkup(keyboard),
+            parse_mode='markdown'
+        )
+
+        return VACANCIES_HANDLER
+    except Exception as e:
+        print(e)
+        raise
+
+
+def form_vacancy_reply(user_data, add_location_image=False):
+    vacancy_id = user_data['vacancies_response'][user_data['vacancies_index']]['id']
+    vacancy = full_vacancy_request(vacancy_id)
+
+    title = vacancy['name']
+    experience = vacancy['experience']['name']
+    address = vacancy['address']
+    if address is not None:
+        address = address['city'] + ', ' + address['street'] + ' ' + address['building']
+    else:
+        address = 'Адрес не указан'
+
+    vacancy_url = vacancy['alternate_url']
+
+    if add_location_image:
+        if vacancy['address'] is not None:
+            pos = vacancy['address']['lng'], vacancy['address']['lat']
+            image_url = map_request(
+                ll='{},{}'.format(*pos),
+                pt='{},{},pm2rdm'.format(*pos),
+                l='map'
+            )
+        else:
+            if vacancy['employer']['logo_urls'] is not None:
+                image_url = vacancy['employer']['logo_urls']['original']
+            else:
+                image_url = ''
+    else:
+        if vacancy['employer']['logo_urls'] is not None:
+            image_url = vacancy['employer']['logo_urls']['original']
+        else:
+            image_url = ''
+
+    return (
+        '*{title}*\n'
+        '{experience}\n'
+        '{address}\n'
+        '[​​​​​​​​​​​]({image_url})'  # EMPTY STRING IN BRACKETS
+        '[Подробнее:]({url})\n'
+    ).format(
+        title=title, experience=experience,
+        address=address, url=vacancy_url,
+        image_url=image_url
+    )
 
 
 def scrolling_news(bot, update, user_data):
@@ -482,8 +619,9 @@ def main():
 (
     ENTER_NAME, ENTER_LOCATION, SEARCH_HANDLER, LOCATION_HANDLER,
     LOCATION_APPLY, MAIN_MENU, PROFILE_CONFIG, SPECIALIZATION_CONFIG,
-    SPECIALIZATION_APPLY, KEYWORDS_CONFIG, KEYWORDS_APPLY
-) = range(11)
+    SPECIALIZATION_APPLY, KEYWORDS_CONFIG, KEYWORDS_APPLY,
+    VACANCIES_HANDLER
+) = range(12)
 
 conversation_handler = ConversationHandler(
     entry_points=[CommandHandler('start', start)],
@@ -511,6 +649,10 @@ conversation_handler = ConversationHandler(
         LOCATION_HANDLER: [
             MessageHandler(Filters.text, location_handler, pass_user_data=True),
             CallbackQueryHandler(scrolling_news, pass_user_data=True)
+        ],
+
+        VACANCIES_HANDLER: [
+            CallbackQueryHandler(scrolling_vacancy, pass_user_data=True)
         ]
     },
 
