@@ -14,6 +14,8 @@ from weather.weather import get_current_weather
 from speech_api.speech_analyze import speech_analyze
 from speech_api.xml_parser import speech_parser
 
+from headhunter_api.suggestions import specialization_suggest, keywords_suggest, region_suggest
+
 from config import TELEGRAM_TOKEN, SPEECH_TOKEN, WEATHER_TOKEN
 
 import logging
@@ -25,15 +27,29 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
+
+back_markup = ReplyKeyboardMarkup([['Вернуться назад']])
 reply_markup1 = ReplyKeyboardMarkup([['Пропустить']])
 reply_markup2 = ReplyKeyboardMarkup(
     [
         ['Показать на карте'],
         ['Последние новости'],
         ['Погода'],
+        ['Вакансии'],
         ['Вернуться назад']
     ]
 )
+reply_markup3 = ReplyKeyboardMarkup([
+    ['Поиск на карте'],
+    ['Показать текущий профиль вакансий'],
+    ['Настройки профиля вакансий']
+])
+reply_markup4 = ReplyKeyboardMarkup([
+    ['Настройка специализации'],
+    ['Настройка ключевых слов'],
+    ['Настройка региона'],
+    ['Вернуться назад']
+])
 
 inline_markup1 = InlineKeyboardMarkup(
     [[InlineKeyboardButton('Следующая новость', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
@@ -64,24 +80,281 @@ def enter_name(bot, update, user_data):
     else:
         user_data['username'] = None
 
+    user_data['vacancy'] = {
+        'region_name': None,
+        'region_id': None,
+        'specialization_name': None,
+        'specialization_id': None,
+        'keywords': None
+    }
+
     update.message.reply_text('Введите свое местоположение')
     return ENTER_LOCATION
 
 
 def enter_location(bot, update, user_data):
     location = update.message.text
+
     if location != 'Пропустить':
         user_data['location'] = location
+        suggests = region_suggest(location)
+        user_data['region_suggests'] = suggests
+
+        if len(suggests) != 0:
+            location_keyboard = [['Пропустить']]
+            for suggestion in suggests:
+                location_keyboard.append([suggestion])
+
+            update.message.reply_text(
+                'Найдено несколько регионов, соответствующих введенному.\n'
+                'Выберите один из них.',
+                reply_markup=ReplyKeyboardMarkup(location_keyboard)
+            )
+
+            return LOCATION_APPLY
+
+        update.message.reply_text(
+            'Данная местнось не найдена в базе регионов.'
+        )
+
     else:
         user_data['location'] = None
 
-    update.message.reply_text('Введите какое-либо местоположение', reply_markup=ReplyKeyboardRemove())
+    name = ', {}'.format(user_data['username']) if user_data['username'] is not None else ''
+    update.message.reply_text('Добро пожаловать{}!'.format(name), reply_markup=reply_markup3)
 
-    return IDLE
+    return MAIN_MENU
 
 
-def idle(bot, update, user_data):
-    response = geocoder_request(geocode=update.message.text, format='json')
+def location_apply(bot, update, user_data):
+    text = update.message.text
+
+    if text in user_data['region_suggests']:
+        user_data['location'] = text
+        user_data['vacancy']['region_name'] = text
+        user_data['vacancy']['region_id'] = user_data['region_suggests'][text]
+        update.message.reply_text(
+            'Регион успешно установлен!'
+        )
+
+    elif text != 'Пропустить':
+        update.message.reply_text(
+            'Введенный текст не является ни одним из перечисленных регионов.\n'
+            'Попробуйте ввести название региона ещё раз.'
+        )
+        return LOCATION_APPLY
+
+    name = ', {}'.format(user_data['username']) if user_data['username'] is not None else ''
+    update.message.reply_text('Добро пожаловать{}!'.format(name), reply_markup=reply_markup3)
+    return MAIN_MENU
+
+
+def main_menu(bot, update, user_data):
+    text = update.message.text
+
+    if text == 'Поиск на карте':
+        update.message.reply_text(
+            'Введите местность, информацию о которой Вы хотите узнать',
+            reply_markup=back_markup
+        )
+        return SEARCH_HANDLER
+
+    elif text == 'Показать текущий профиль вакансий':
+        region = user_data['vacancy']['region_name']
+        if region is None:
+            if user_data['location'] is None:
+                region = 'Не указано'
+            else:
+                region = 'Указанный регион не найден в базе данных HeadHunter'
+
+        spec = user_data['vacancy']['specialization_name']
+        if spec is None: spec = 'Не указано'
+
+        keywords = user_data['vacancy']['keywords']
+        if keywords is None: keywords = 'Не указано'
+
+        update.message.reply_text(
+            'Регион: {}\n'
+            'Специализация: {}\n'
+            'Ключевые слова: {}\n'.format(
+                region, spec, keywords
+            )
+        )
+
+    elif text == 'Настройки профиля вакансий':
+        update.message.reply_text(
+            'Выберите параметры, которые Вы хотите настроить',
+            reply_markup=reply_markup4
+        )
+        return PROFILE_CONFIG
+
+    return MAIN_MENU
+
+
+def profile_config(bot, update, user_data):
+    text = update.message.text
+
+    if text == 'Настройка специализации':
+        update.message.reply_text(
+            'Введите название специализации.\n'
+            'Бот попробует найти схожие специализации в базе данных HeadHunter.',
+            reply_markup=back_markup
+        )
+        return SPECIALIZATION_CONFIG
+
+    elif text == 'Настройка ключевых слов':
+        update.message.reply_text(
+            'Введите ключевые слова, которые будут использоваться при поиске вакансий',
+            reply_markup=back_markup
+        )
+        return KEYWORDS_CONFIG
+
+    elif text == 'Настройка региона':
+        update.message.reply_text('Введите свое местоположение', reply_markup=reply_markup1)
+        return ENTER_LOCATION
+
+    elif text == 'Вернуться назад':
+        update.message.reply_text('Что Вы хотите сделать?', reply_markup=reply_markup3)
+        return MAIN_MENU
+
+    return PROFILE_CONFIG
+
+
+def specialization_config(bot, update, user_data):
+    text = update.message.text
+    suggests = specialization_suggest(text)
+
+    if text == 'Вернуться назад':
+        update.message.reply_text(
+            'Возвращаемся в меню настроек',
+            reply_markup=reply_markup4
+        )
+        return PROFILE_CONFIG
+
+    if len(suggests) != 0:
+        user_data['spec_suggests'] = suggests
+
+        spec_keyboard = [['Вернуться назад']]
+        for suggestion in suggests:
+            spec_keyboard.append([suggestion])
+
+        update.message.reply_text(
+            'Бот нашел несколько схожих специализаций. Выберите одну из них',
+            reply_markup=ReplyKeyboardMarkup(spec_keyboard)
+        )
+
+        return SPECIALIZATION_APPLY
+
+    else:
+        update.message.reply_text(
+            'Не нашлось специализаций, схожих с введенной.\n'
+            'Попробуйте ввести специализацию еще раз.'
+        )
+        return SPECIALIZATION_CONFIG
+
+
+def specialization_apply(bot, update, user_data):
+    text = update.message.text
+
+    if text in user_data['spec_suggests']:
+        user_data['vacancy']['specialization_name'] = text
+        user_data['vacancy']['specialization_id'] = user_data['spec_suggests'][text]
+        update.message.reply_text(
+            'Специализация успешно установлена! Возвращаемся в меню настроек',
+            reply_markup=reply_markup4
+        )
+        return PROFILE_CONFIG
+
+    elif text == 'Вернуться назад':
+        update.message.reply_text(
+            'Возвращаемся в меню настроек',
+            reply_markup=reply_markup4
+        )
+        return PROFILE_CONFIG
+
+    else:
+        update.message.reply_text(
+            'Введенный текст не является ни одной из перечисленных специализаций.\n'
+            'Попробуйте ввести название специализации ещё раз.'
+        )
+
+    return SPECIALIZATION_APPLY
+
+
+def keywords_config(bot, update, user_data):
+    text = update.message.text
+    suggests = keywords_suggest(text)
+
+    if text == 'Вернуться назад':
+        update.message.reply_text(
+            'Возвращаемся в меню настроек',
+            reply_markup=reply_markup4
+        )
+        return PROFILE_CONFIG
+
+    if len(suggests) != 0:
+        user_data['keywords_suggests'] = suggests
+
+        keywords_keyboard = [['Вернуться назад']]
+        for suggestion in suggests:
+            keywords_keyboard.append([suggestion])
+
+        update.message.reply_text(
+            'Бот нашел несколько схожих ключевых слов. Выберите одно из них',
+            reply_markup=ReplyKeyboardMarkup(keywords_keyboard)
+        )
+
+        return KEYWORDS_APPLY
+
+    else:
+        user_data['vacancy']['keywords'] = text
+        update.message.reply_text(
+            'Ключевые слова успешно установлены! Возвращаемся в меню настроек',
+            reply_markup=reply_markup4
+        )
+
+    return PROFILE_CONFIG
+
+
+def keywords_apply(bot, update, user_data):
+    text = update.message.text
+
+    if text in user_data['keywords_suggests']:
+        user_data['vacancy']['keywords'] = text
+        update.message.reply_text(
+            'Ключевые слова успешно установлены! Возвращаемся в меню настроек',
+            reply_markup=reply_markup4
+        )
+        return PROFILE_CONFIG
+
+    elif text == 'Вернуться назад':
+        update.message.reply_text(
+            'Возвращаемся в меню настроек',
+            reply_markup=reply_markup4
+        )
+        return PROFILE_CONFIG
+
+    else:
+        update.message.reply_text(
+            'Введенный текст не является ни одним из перечисленных ключевых слов.\n'
+            'Попробуйте ввести ключевые слова ещё раз.'
+        )
+
+    return KEYWORDS_APPLY
+
+
+def search_handler(bot, update, user_data):
+    text = update.message.text
+
+    if text == 'Вернуться назад':
+        update.message.reply_text(
+            'Возвражаемся в главное меню',
+            reply_markup=reply_markup3
+        )
+        return MAIN_MENU
+
+    response = geocoder_request(geocode=text, format='json')
+
     if check_response(response):
         update.message.reply_text(
             'Найдено местоположение',
@@ -92,7 +365,7 @@ def idle(bot, update, user_data):
         return LOCATION_HANDLER
     update.message.reply_text('По данному адресу ничего не найдено.')
 
-    return IDLE
+    return SEARCH_HANDLER
 
 
 def voice_to_text(bot, update, user_data):
@@ -113,9 +386,10 @@ def voice_to_text(bot, update, user_data):
 
         user_data['current_response'] = data
         return LOCATION_HANDLER
+
     update.message.reply_text('По данному адресу ничего не найдено.')
 
-    return IDLE
+    return SEARCH_HANDLER
 
 
 def location_handler(bot, update, user_data):
@@ -144,12 +418,17 @@ def location_handler(bot, update, user_data):
             sleep(1)
         else:
             update.message.reply_text('Новостей для этой местности не найдено')
+
     elif text == 'Погода':
         city, code = get_city(user_data['current_response'], 'ru-RU'), get_country_code(user_data['current_response'])
         update.message.reply_text(get_current_weather(city, code, WEATHER_TOKEN))
+
+    elif text == 'Вакансии':
+        update.message.reply_text('Функция не реализована')
+
     elif text == 'Вернуться назад':
         update.message.reply_text('Введите какое-либо местоположение', reply_markup=ReplyKeyboardRemove())
-        return IDLE
+        return SEARCH_HANDLER
 
     return LOCATION_HANDLER
 
@@ -191,6 +470,7 @@ def error(bot, update, error):
 
 def main():
     updater = Updater(TELEGRAM_TOKEN)
+
     dp = updater.dispatcher
     dp.add_error_handler(error)
     dp.add_handler(conversation_handler)
@@ -199,7 +479,11 @@ def main():
     updater.idle()
 
 
-ENTER_NAME, ENTER_LOCATION, IDLE, LOCATION_HANDLER = range(4)
+(
+    ENTER_NAME, ENTER_LOCATION, SEARCH_HANDLER, LOCATION_HANDLER,
+    LOCATION_APPLY, MAIN_MENU, PROFILE_CONFIG, SPECIALIZATION_CONFIG,
+    SPECIALIZATION_APPLY, KEYWORDS_CONFIG, KEYWORDS_APPLY
+) = range(11)
 
 conversation_handler = ConversationHandler(
     entry_points=[CommandHandler('start', start)],
@@ -207,9 +491,20 @@ conversation_handler = ConversationHandler(
     states={
         ENTER_NAME: [MessageHandler(Filters.text, enter_name, pass_user_data=True)],
         ENTER_LOCATION: [MessageHandler(Filters.text, enter_location, pass_user_data=True)],
+        LOCATION_APPLY: [MessageHandler(Filters.text, location_apply, pass_user_data=True)],
 
-        IDLE: [
-            MessageHandler(Filters.text, idle, pass_user_data=True),
+        MAIN_MENU: [MessageHandler(Filters.text, main_menu, pass_user_data=True)],
+
+        PROFILE_CONFIG: [MessageHandler(Filters.text, profile_config, pass_user_data=True)],
+
+        SPECIALIZATION_CONFIG: [MessageHandler(Filters.text, specialization_config, pass_user_data=True)],
+        SPECIALIZATION_APPLY: [MessageHandler(Filters.text, specialization_apply, pass_user_data=True)],
+
+        KEYWORDS_CONFIG: [MessageHandler(Filters.text, keywords_config, pass_user_data=True)],
+        KEYWORDS_APPLY: [MessageHandler(Filters.text, keywords_apply, pass_user_data=True)],
+
+        SEARCH_HANDLER: [
+            MessageHandler(Filters.text, search_handler, pass_user_data=True),
             MessageHandler(Filters.voice, voice_to_text, pass_user_data=True)
         ],
 
