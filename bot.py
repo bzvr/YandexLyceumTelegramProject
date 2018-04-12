@@ -40,24 +40,38 @@ keyboard5 = [['Найти авиарейс'], ['Вернуться назад']]
 keyboard6 = [['Поиск на карте'], ['Показать текущий профиль вакансий'], ['Настройки профиля вакансий']]
 keyboard7 = [['Настройка специализации'], ['Настройка ключевых слов'], ['Настройка региона'], ['Вернуться назад']]
 
-inline_markup1 = InlineKeyboardMarkup(
+inline_news_state1 = InlineKeyboardMarkup(
     [[InlineKeyboardButton('Следующая новость', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
 
-inline_markup2 = InlineKeyboardMarkup([
+inline_news_state2 = InlineKeyboardMarkup([
     [InlineKeyboardButton('Предыдущая новость', callback_data=2),
      InlineKeyboardButton('Следующая новость', callback_data=1)],
     [InlineKeyboardButton('Назад', callback_data=3)]
 ])
 
-inline_markup3 = InlineKeyboardMarkup([
+inline_news_state3 = InlineKeyboardMarkup([
     [InlineKeyboardButton('Предыдущая новость', callback_data=2)],
     [InlineKeyboardButton('Назад', callback_data=3)]
 ])
 
-inline_markup4 = InlineKeyboardMarkup([
+inline_maps = InlineKeyboardMarkup([
     [InlineKeyboardButton('Карта', callback_data='map')],
     [InlineKeyboardButton('Спутник', callback_data='sat')],
     [InlineKeyboardButton('Гибрид', callback_data='sat,skl')],
+])
+
+inline_sch_state1 = InlineKeyboardMarkup(
+    [[InlineKeyboardButton('Следующий рейс', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
+
+inline_sch_state2 = InlineKeyboardMarkup([
+    [InlineKeyboardButton('Предыдущий рейс', callback_data=2),
+     InlineKeyboardButton('Следующий рейс', callback_data=1)],
+    [InlineKeyboardButton('Назад', callback_data=3)]
+])
+
+inline_sch_state3 = InlineKeyboardMarkup([
+    [InlineKeyboardButton('Предыдущий рейс', callback_data=2)],
+    [InlineKeyboardButton('Назад', callback_data=3)]
 ])
 
 
@@ -394,18 +408,18 @@ def location_handler(bot, update, user_data):
     if text == 'Показать на карте':
         res = "[​​​​​​​​​​​]({}){}".format(get_static_map(user_data),
                                            'Карта для города ' + get_city(user_data['current_response'], 'ru-RU'))
-        update.message.reply_text(res, parse_mode='markdown', reply_markup=inline_markup4)
+        update.message.reply_text(res, parse_mode='markdown', reply_markup=inline_maps)
 
     elif text == 'Последние новости':
         news = parse_news(user_data['current_response'])
         if news is not None:
-            user_data['news'] = news
+            user_data['array'] = news
             user_data['index'] = 0
             user_data['length'] = len(news)
             update.message.reply_text('Найдено новостей для данного местоположения: {}'.format(len(news)),
                                       reply_markup=ReplyKeyboardRemove())
             update.message.reply_text('*{0}*\n{1}\n[Подробнее:]({2})'.format(*news[0]), parse_mode='markdown',
-                                      reply_markup=inline_markup1)
+                                      reply_markup=inline_news_state1)
             return NEWS_HANDLER
 
         else:
@@ -570,7 +584,7 @@ def form_vacancy_reply(user_data, add_location_image=False):
 
 def scrolling_news(bot, update, user_data):
     query = update.callback_query
-    d = {0: inline_markup1, user_data['length'] - 1: inline_markup3}
+    d = {0: inline_news_state1, user_data['length'] - 1: inline_news_state3}
     if query.data == '1':
         user_data['index'] = min(user_data['length'], user_data['index'] + 1)
 
@@ -585,10 +599,10 @@ def scrolling_news(bot, update, user_data):
 
         return LOCATION_HANDLER
     try:
-        bot.edit_message_text(text='*{0}*\n{1}\n[Подробнее:]({2})'.format(*user_data['news'][user_data['index']]),
+        bot.edit_message_text(text='*{0}*\n{1}\n[Подробнее:]({2})'.format(*user_data['array'][user_data['index']]),
                               chat_id=query.message.chat_id,
                               message_id=query.message.message_id, parse_mode='markdown',
-                              reply_markup=d[user_data['index']] if user_data['index'] in d else inline_markup2)
+                              reply_markup=d[user_data['index']] if user_data['index'] in d else inline_news_state2)
     except IndexError:
         if user_data['index'] < 0:
             user_data['index'] = 0
@@ -603,7 +617,7 @@ def choosing_map_type(bot, update, user_data):
                           text="[​​​​​​​​​​​]({}){}".format(get_static_map(user_data, query.data),
                                                             'Карта для города ' + get_city(
                                                                 user_data['current_response'], 'ru-RU')),
-                          parse_mode='markdown', reply_markup=inline_markup4)
+                          parse_mode='markdown', reply_markup=inline_maps)
 
 
 def enter_the_map(bot, update):
@@ -638,9 +652,11 @@ def schedule(bot, update, user_data):
     if text == 'Найти авиарейс':
         city = get_city(user_data['current_response'], 'ru_RU')
         airports = airs.get(city, 0)
+
         if airports:
             airport_question(update, city)
             return SET_SECOND_CITY_HANDLER
+
         else:
             update.message.reply_text(
                 'В заданном городе аэропорта не найдено')
@@ -654,41 +670,70 @@ def schedule(bot, update, user_data):
 
 def set_second_city(bot, update, user_data):
     text = update.message.text
+
     if text == 'Вернуться назад':
         update.message.reply_text(
             'Выберите один из вариантов поиска:',
             reply_markup=ReplyKeyboardMarkup(keyboard5))
         return RASP_HANDLER
+
+    elif text == 'Вернуться в меню':
+        update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard2))
+
+        return LOCATION_HANDLER
+
     else:
         user_data['airport1'] = text.split(', ')[-1]
-        update.message.reply_text('Введите город пункта назначения:', reply_markup=ReplyKeyboardMarkup(keyboard3))
+        update.message.reply_text('Введите город пункта назначения:',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard3 + [['Вернуться в меню']]))
         return SET_SECOND_AIRPORT_HANDLER
 
 
 def set_second_airport(bot, update, user_data):
     text = update.message.text
+
     if text == 'Вернуться назад':
         city = get_city(user_data['current_response'], 'ru_RU')
         airport_question(update, city)
         return SET_SECOND_CITY_HANDLER
+
+    elif text == 'Вернуться в меню':
+        update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard2))
+
+        return LOCATION_HANDLER
+
     else:
         response = geocoder_request(geocode=text, format='json')
         if check_response(response):
             user_data['city2'] = get_city(response, 'ru_RU')
             airports = airs.get(user_data['city2'], 0)
+            if not airports:
+                update.message.reply_text('Введеный город не найден. Проверьте написание.')
+                return SET_SECOND_AIRPORT_HANDLER
             update.message.reply_text('Выберите аэропорт прибытия:',
                                       reply_markup=ReplyKeyboardMarkup(
-                                          [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад']]))
+                                          [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад'],
+                                                                                               ['Вернуться в меню']]))
             return FIND_FLIGHTS_HANDLER
         update.message.reply_text('Введеный город не найден. Проверьте написание.')
 
 
 def find_flights(bot, update, user_data):
     text = update.message.text
+
     if text == 'Вернуться назад':
         city = get_city(user_data['current_response'], 'ru_RU')
         airport_question(update, city)
         return SET_SECOND_CITY_HANDLER
+
+    elif text == 'Вернуться в меню':
+        update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard2))
+
+        return LOCATION_HANDLER
+
     else:
         airport2 = text.split(', ')[-1]
         flights = get_flights(user_data['airport1'], airport2)
@@ -697,14 +742,58 @@ def find_flights(bot, update, user_data):
             city = get_city(user_data['current_response'], 'ru_RU')
             airport_question(update, city)
             return SET_SECOND_CITY_HANDLER
-        update.message.reply_text(flights[0], reply_markup=ReplyKeyboardMarkup(keyboard3))
+
+        user_data['array'] = flights
+        user_data['index'] = 0
+        user_data['length'] = len(flights)
+        update.message.reply_text('Найдено рейсов для данного направления: {}'.format(len(flights)),
+                                  reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(flights[0],
+                                  reply_markup=inline_sch_state1 if len(flights) > 1 else ReplyKeyboardMarkup(
+                                      keyboard3))
+
+
+def scrolling_flights(bot, update, user_data):
+    print(user_data['array'])
+    query = update.callback_query
+    d = {0: inline_sch_state1, user_data['length'] - 1: inline_sch_state3}
+    if query.data == '1':
+        user_data['index'] = min(user_data['length'], user_data['index'] + 1)
+
+    elif query.data == '2':
+        user_data['index'] = max(0, user_data['index'] - 1)
+
+    elif query.data == '3':
+        bot.deleteMessage(chat_id=query.message.chat_id,
+                          message_id=query.message.message_id)
+        city = get_city(user_data['current_response'], 'ru_RU')
+        airports = airs.get(city, 0)
+        bot.sendMessage(text='Из какого аэропорта города {} вы хотите найти рейс?'.format(city),
+                        chat_id=query.message.chat_id,
+                        reply_markup=ReplyKeyboardMarkup(
+                            [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад'],
+                                                                                 ['Вернуться в меню']]))
+        return SET_SECOND_CITY_HANDLER
+
+    try:
+        bot.edit_message_text(text=user_data['array'][user_data['index']],
+                              chat_id=query.message.chat_id,
+                              message_id=query.message.message_id, parse_mode='markdown',
+                              reply_markup=d[user_data['index']] if user_data['index'] in d else inline_sch_state2)
+    except IndexError:
+        if user_data['index'] < 0:
+            user_data['index'] = 0
+
+        else:
+            user_data['index'] = user_data['length'] - 1
 
 
 def airport_question(update, city):
     airports = airs.get(city, 0)
     update.message.reply_text('Из какого аэропорта города {} вы хотите найти рейс?'.format(city),
                               reply_markup=ReplyKeyboardMarkup(
-                                  [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад']]))
+                                  [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад'],
+                                                                                       ['Вернуться в меню']]))
 
 
 def stop(bot, update):
@@ -789,7 +878,8 @@ conversation_handler = ConversationHandler(
         ],
 
         FIND_FLIGHTS_HANDLER: [
-            MessageHandler(Filters.text, find_flights, pass_user_data=True)
+            MessageHandler(Filters.text, find_flights, pass_user_data=True),
+            CallbackQueryHandler(scrolling_flights, pass_user_data=True),
         ]
     },
 
