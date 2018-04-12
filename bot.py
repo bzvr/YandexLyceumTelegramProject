@@ -31,34 +31,14 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-
-back_markup = ReplyKeyboardMarkup([['Вернуться назад']])
-reply_markup1 = ReplyKeyboardMarkup([['Пропустить']])
-reply_markup2 = ReplyKeyboardMarkup(
-    [
-        ['Показать на карте'],
-        ['Последние новости'],
-        ['Погода'],
-        ['Вакансии'],
-        ['Вернуться назад']
-    ]
-)
-reply_markup3 = ReplyKeyboardMarkup([
-    ['Поиск на карте'],
-    ['Показать текущий профиль вакансий'],
-    ['Настройки профиля вакансий']
-])
-reply_markup4 = ReplyKeyboardMarkup([
-    ['Настройка специализации'],
-    ['Настройка ключевых слов'],
-    ['Настройка региона'],
-    ['Вернуться назад']
-])
 keyboard1 = [['Пропустить']]
-keyboard2 = [['Показать на карте'], ['Последние новости'], ['Погода'], ['Расписания'], ['Вернуться назад']]
+keyboard2 = [['Показать на карте'], ['Последние новости'], ['Погода'], ['Расписания'], ['Вакансии'],
+             ['Вернуться назад']]
 keyboard3 = [['Вернуться назад']]
 keyboard4 = [['Текущая погода'], ['Прогноз на 6 дней'], ['Вернуться назад']]
 keyboard5 = [['Найти авиарейс'], ['Вернуться назад']]
+keyboard6 = [['Поиск на карте'], ['Показать текущий профиль вакансий'], ['Настройки профиля вакансий']]
+keyboard7 = [['Настройка специализации'], ['Настройка ключевых слов'], ['Настройка региона'], ['Вернуться назад']]
 
 inline_markup1 = InlineKeyboardMarkup(
     [[InlineKeyboardButton('Следующая новость', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
@@ -83,7 +63,7 @@ inline_markup4 = InlineKeyboardMarkup([
 
 def start(bot, update):
     update.message.reply_text(
-        'Введите свое имя', reply_markup=reply_markup1, one_time_keyboard=False)
+        'Введите свое имя', reply_markup=ReplyKeyboardMarkup(keyboard1), one_time_keyboard=False)
 
     return ENTER_NAME
 
@@ -137,7 +117,7 @@ def enter_location(bot, update, user_data):
         user_data['location'] = None
 
     name = ', {}'.format(user_data['username']) if user_data['username'] is not None else ''
-    update.message.reply_text('Добро пожаловать{}!'.format(name), reply_markup=reply_markup3)
+    update.message.reply_text('Добро пожаловать{}!'.format(name), reply_markup=ReplyKeyboardMarkup(keyboard6))
 
     return MAIN_MENU
 
@@ -161,7 +141,7 @@ def location_apply(bot, update, user_data):
         return LOCATION_APPLY
 
     name = ', {}'.format(user_data['username']) if user_data['username'] is not None else ''
-    update.message.reply_text('Добро пожаловать{}!'.format(name), reply_markup=reply_markup3)
+    update.message.reply_text('Добро пожаловать{}!'.format(name), reply_markup=ReplyKeyboardMarkup(keyboard6))
     return MAIN_MENU
 
 
@@ -171,7 +151,7 @@ def main_menu(bot, update, user_data):
     if text == 'Поиск на карте':
         update.message.reply_text(
             'Введите местность, информацию о которой Вы хотите узнать',
-            reply_markup=back_markup
+            reply_markup=ReplyKeyboardMarkup(keyboard3)
         )
         return SEARCH_HANDLER
 
@@ -200,7 +180,7 @@ def main_menu(bot, update, user_data):
     elif text == 'Настройки профиля вакансий':
         update.message.reply_text(
             'Выберите параметры, которые Вы хотите настроить',
-            reply_markup=reply_markup4
+            reply_markup=ReplyKeyboardMarkup(keyboard7)
         )
         return PROFILE_CONFIG
 
@@ -214,23 +194,23 @@ def profile_config(bot, update, user_data):
         update.message.reply_text(
             'Введите название специализации.\n'
             'Бот попробует найти схожие специализации в базе данных HeadHunter.',
-            reply_markup=back_markup
+            reply_markup=ReplyKeyboardMarkup(keyboard3)
         )
         return SPECIALIZATION_CONFIG
 
     elif text == 'Настройка ключевых слов':
         update.message.reply_text(
             'Введите ключевые слова, которые будут использоваться при поиске вакансий',
-            reply_markup=back_markup
+            reply_markup=ReplyKeyboardMarkup(keyboard3)
         )
         return KEYWORDS_CONFIG
 
     elif text == 'Настройка региона':
-        update.message.reply_text('Введите свое местоположение', reply_markup=reply_markup1)
+        update.message.reply_text('Введите свое местоположение', reply_markup=ReplyKeyboardMarkup(keyboard1))
         return ENTER_LOCATION
 
     elif text == 'Вернуться назад':
-        update.message.reply_text('Что Вы хотите сделать?', reply_markup=reply_markup3)
+        update.message.reply_text('Что Вы хотите сделать?', reply_markup=ReplyKeyboardMarkup(keyboard6))
         return MAIN_MENU
 
     return PROFILE_CONFIG
@@ -243,7 +223,7 @@ def specialization_config(bot, update, user_data):
     if text == 'Вернуться назад':
         update.message.reply_text(
             'Возвращаемся в меню настроек',
-            reply_markup=reply_markup4
+            reply_markup=ReplyKeyboardMarkup(keyboard7)
         )
         return PROFILE_CONFIG
 
@@ -277,14 +257,14 @@ def specialization_apply(bot, update, user_data):
         user_data['vacancy']['specialization_id'] = user_data['spec_suggests'][text]
         update.message.reply_text(
             'Специализация успешно установлена! Возвращаемся в меню настроек',
-            reply_markup=reply_markup4
+            reply_markup=ReplyKeyboardMarkup(keyboard7)
         )
         return PROFILE_CONFIG
 
     elif text == 'Вернуться назад':
         update.message.reply_text(
             'Возвращаемся в меню настроек',
-            reply_markup=reply_markup4
+            reply_markup=ReplyKeyboardMarkup(keyboard7)
         )
         return PROFILE_CONFIG
 
@@ -304,7 +284,7 @@ def keywords_config(bot, update, user_data):
     if text == 'Вернуться назад':
         update.message.reply_text(
             'Возвращаемся в меню настроек',
-            reply_markup=reply_markup4
+            reply_markup=ReplyKeyboardMarkup(keyboard7)
         )
         return PROFILE_CONFIG
 
@@ -326,7 +306,7 @@ def keywords_config(bot, update, user_data):
         user_data['vacancy']['keywords'] = text
         update.message.reply_text(
             'Ключевые слова успешно установлены! Возвращаемся в меню настроек',
-            reply_markup=reply_markup4
+            reply_markup=ReplyKeyboardMarkup(keyboard7)
         )
 
     return PROFILE_CONFIG
@@ -339,14 +319,14 @@ def keywords_apply(bot, update, user_data):
         user_data['vacancy']['keywords'] = text
         update.message.reply_text(
             'Ключевые слова успешно установлены! Возвращаемся в меню настроек',
-            reply_markup=reply_markup4
+            reply_markup=ReplyKeyboardMarkup(keyboard7)
         )
         return PROFILE_CONFIG
 
     elif text == 'Вернуться назад':
         update.message.reply_text(
             'Возвращаемся в меню настроек',
-            reply_markup=reply_markup4
+            reply_markup=ReplyKeyboardMarkup(keyboard7)
         )
         return PROFILE_CONFIG
 
@@ -365,7 +345,7 @@ def search_handler(bot, update, user_data):
     if text == 'Вернуться назад':
         update.message.reply_text(
             'Возвражаемся в главное меню',
-            reply_markup=reply_markup3
+            reply_markup=ReplyKeyboardMarkup(keyboard6)
         )
         return MAIN_MENU
 
@@ -374,7 +354,7 @@ def search_handler(bot, update, user_data):
     if check_response(response):
         update.message.reply_text(
             'Найдено местоположение',
-            reply_markup=reply_markup2
+            reply_markup=ReplyKeyboardMarkup(keyboard2)
         )
 
         user_data['current_response'] = response
@@ -395,10 +375,10 @@ def voice_to_text(bot, update, user_data):
     if check_response(data):
         update.message.reply_text(
             'Найдено местоположение',
-            reply_markup=reply_markup2
+            reply_markup=ReplyKeyboardMarkup(keyboard2)
         )
         update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
-                                  reply_markup=reply_markup2)
+                                  reply_markup=ReplyKeyboardMarkup(keyboard2))
 
         user_data['current_response'] = data
         return LOCATION_HANDLER
@@ -442,9 +422,6 @@ def location_handler(bot, update, user_data):
             'Выберите один из вариантов поиска:',
             reply_markup=ReplyKeyboardMarkup(keyboard5))
         return RASP_HANDLER
-
-        city, code = get_city(user_data['current_response'], 'ru-RU'), get_country_code(user_data['current_response'])
-        update.message.reply_text(get_current_weather(city, code, WEATHER_TOKEN))
 
     elif text == 'Вакансии':
         try:
@@ -499,7 +476,7 @@ def scrolling_vacancy(bot, update, user_data):
             bot.send_message(
                 query.message.chat_id,
                 'Выберите одну из возможных функций для данного местоположения:',
-                reply_markup=reply_markup2
+                reply_markup=ReplyKeyboardMarkup(keyboard2)
             )
 
             return LOCATION_HANDLER
@@ -604,7 +581,7 @@ def scrolling_news(bot, update, user_data):
         bot.deleteMessage(chat_id=query.message.chat_id,
                           message_id=query.message.message_id)
         bot.send_message(query.message.chat_id, 'Выберите одну из возможных функций для данного местоположения:',
-                         reply_markup=reply_markup2)
+                         reply_markup=ReplyKeyboardMarkup(keyboard2))
 
         return LOCATION_HANDLER
     try:
