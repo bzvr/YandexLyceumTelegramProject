@@ -650,11 +650,11 @@ def schedule(bot, update, user_data):
     text = update.message.text
 
     if text == 'Найти авиарейс':
-        city = get_city(user_data['current_response'], 'ru_RU')
-        airports = airs.get(city, 0)
+        city_ru, city_en = get_city(user_data['current_response'], 'ru_RU'), get_city(user_data['current_response'])
+        airports = airs.get(city_ru, []) + airs.get(city_en, [])
 
         if airports:
-            airport_question(update, city)
+            airport_question(update, city_ru, city_en)
             return SET_SECOND_CITY_HANDLER
 
         else:
@@ -694,8 +694,8 @@ def set_second_airport(bot, update, user_data):
     text = update.message.text
 
     if text == 'Вернуться назад':
-        city = get_city(user_data['current_response'], 'ru_RU')
-        airport_question(update, city)
+        city_ru, city_en = get_city(user_data['current_response'], 'ru_RU'), get_city(user_data['current_response'])
+        airport_question(update, city_ru, city_en)
         return SET_SECOND_CITY_HANDLER
 
     elif text == 'Вернуться в меню':
@@ -708,7 +708,8 @@ def set_second_airport(bot, update, user_data):
         response = geocoder_request(geocode=text, format='json')
         if check_response(response):
             user_data['city2'] = get_city(response, 'ru_RU')
-            airports = airs.get(user_data['city2'], 0)
+            city_en = get_city(response)
+            airports = airs.get(user_data['city2'], []) + airs.get(city_en, [])
             if not airports:
                 update.message.reply_text('Введеный город не найден. Проверьте написание.')
                 return SET_SECOND_AIRPORT_HANDLER
@@ -724,8 +725,8 @@ def find_flights(bot, update, user_data):
     text = update.message.text
 
     if text == 'Вернуться назад':
-        city = get_city(user_data['current_response'], 'ru_RU')
-        airport_question(update, city)
+        city_ru, city_en = get_city(user_data['current_response'], 'ru_RU'), get_city(user_data['current_response'])
+        airport_question(update, city_ru, city_en)
         return SET_SECOND_CITY_HANDLER
 
     elif text == 'Вернуться в меню':
@@ -739,8 +740,8 @@ def find_flights(bot, update, user_data):
         flights = get_flights(user_data['airport1'], airport2)
         if not flights:
             update.message.reply_text('Рейсов между указанными ранее аэропортами не найдено!')
-            city = get_city(user_data['current_response'], 'ru_RU')
-            airport_question(update, city)
+            city_ru, city_en = get_city(user_data['current_response'], 'ru_RU'), get_city(user_data['current_response'])
+            airport_question(update, city_ru, city_en)
             return SET_SECOND_CITY_HANDLER
 
         user_data['array'] = flights
@@ -766,9 +767,9 @@ def scrolling_flights(bot, update, user_data):
     elif query.data == '3':
         bot.deleteMessage(chat_id=query.message.chat_id,
                           message_id=query.message.message_id)
-        city = get_city(user_data['current_response'], 'ru_RU')
-        airports = airs.get(city, 0)
-        bot.sendMessage(text='Из какого аэропорта города {} вы хотите найти рейс?'.format(city),
+        city_ru, city_en = get_city(user_data['current_response'], 'ru_RU'), get_city(user_data['current_response'])
+        airports = airs.get(city_ru, []) + airs.get(city_en, [])
+        bot.sendMessage(text='Из какого аэропорта города {} вы хотите найти рейс?'.format(city_ru),
                         chat_id=query.message.chat_id,
                         reply_markup=ReplyKeyboardMarkup(
                             [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад'],
@@ -788,9 +789,9 @@ def scrolling_flights(bot, update, user_data):
             user_data['index'] = user_data['length'] - 1
 
 
-def airport_question(update, city):
-    airports = airs.get(city, 0)
-    update.message.reply_text('Из какого аэропорта города {} вы хотите найти рейс?'.format(city),
+def airport_question(update, city_ru, city_en):
+    airports = airs.get(city_ru, []) + airs.get(city_en, [])
+    update.message.reply_text('Из какого аэропорта города {} вы хотите найти рейс?'.format(city_ru),
                               reply_markup=ReplyKeyboardMarkup(
                                   [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад'],
                                                                                        ['Вернуться в меню']]))
