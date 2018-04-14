@@ -429,25 +429,55 @@ def location_handler(bot, update, user_data):
             city = get_city(data, 'ru_RU')
             region = list(region_suggest(city).items())[0][1]
 
+        except:
+            update.message.reply_text(
+                'Данный город не найден в базе данных HeadHunter.',
+                reply_markup=ReplyKeyboardMarkup(keyboard2)
+            )
+            return LOCATION_HANDLER
+
+        try:
             user_data['vacancies_response'] = vacancies_request(area=region)['items']
+            if len(user_data['vacancies_response']) == 0:
+                update.message.reply_text(
+                    'Для данного города не найдено ни одной вакансии.',
+                    reply_markup=ReplyKeyboardMarkup(keyboard2)
+                )
+                return LOCATION_HANDLER
+
             user_data['vacancies_index'] = 0
-            user_data['vacancies_image'] = 'location'
+            user_data['vacancies_image'] = 'logo'
+
+            _keyboard = [
+                [InlineKeyboardButton('Следующая вакансия', callback_data=1)],
+                [InlineKeyboardButton('Местоположение', callback_data=4)],
+                [InlineKeyboardButton('Назад', callback_data=3)]
+            ]
+
+            if len(user_data['vacancies_response']) == 1:
+                _keyboard.pop(0)
+
+            reply = form_vacancy_reply(user_data)
+            if reply['address'] == 'Адрес не указан':
+                _keyboard.pop(1)
 
             update.message.reply_text('Найдено несколько вакансий', reply_markup=ReplyKeyboardRemove())
             update.message.reply_text(
-                form_vacancy_reply(user_data),
+                (
+                    '*{title}*\n'
+                    '{experience}\n'
+                    '{address}\n'
+                    '[Подробнее:]({url})\n'
+                    '[​​​​​​​​​​​]({image_url})'  # EMPTY STRING IN BRACKETS
+                ).format(**reply),
                 parse_mode='markdown',
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton('Следующая вакансия', callback_data=1)],
-                    [InlineKeyboardButton('Местоположение', callback_data=4)],
-                    [InlineKeyboardButton('Назад', callback_data=3)]
-                ])
+                reply_markup=InlineKeyboardMarkup(_keyboard)
             )
 
             return VACANCIES_HANDLER
 
         except Exception as e:
-            print(e)
+            logger.exception(e)
 
     elif text == 'Вернуться назад':
         update.message.reply_text('Введите какое-либо местоположение', reply_markup=ReplyKeyboardRemove())
@@ -503,23 +533,34 @@ def scrolling_vacancy(bot, update, user_data):
                 'Следующая вакансия', callback_data=1
             ))
 
-        if user_data['vacancies_image'] == 'location':
-            keyboard[1].append(InlineKeyboardButton('Логотип', callback_data=5))
-        else:
-            keyboard[1].append(InlineKeyboardButton('Местоположение', callback_data=4))
+        reply = form_vacancy_reply(
+            user_data,
+            user_data['vacancies_image'] == 'location'
+        )
+
+        if reply['address'] != 'Адрес не указан':
+            if user_data['vacancies_image'] == 'location':
+                keyboard[1].append(InlineKeyboardButton('Логотип', callback_data=5))
+            else:
+                keyboard[1].append(InlineKeyboardButton('Местоположение', callback_data=4))
 
         bot.edit_message_text(
             chat_id=query.message.chat_id,
             message_id=query.message.message_id,
-            text=form_vacancy_reply(user_data, user_data['vacancies_image'] == 'location'),
+            text=(
+                '*{title}*\n'
+                '{experience}\n'
+                '{address}\n'
+                '[​​​​​​​​​​​]({image_url})'  # EMPTY STRING IN BRACKETS
+                '[Подробнее:]({url})\n'
+            ).format(**reply),
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode='markdown'
         )
 
         return VACANCIES_HANDLER
     except Exception as e:
-        print(e)
-        raise
+        logger.exception(e)
 
 
 def form_vacancy_reply(user_data, add_location_image=False):
@@ -555,17 +596,13 @@ def form_vacancy_reply(user_data, add_location_image=False):
         else:
             image_url = ''
 
-    return (
-        '*{title}*\n'
-        '{experience}\n'
-        '{address}\n'
-        '[​​​​​​​​​​​]({image_url})'  # EMPTY STRING IN BRACKETS
-        '[Подробнее:]({url})\n'
-    ).format(
-        title=title, experience=experience,
-        address=address, url=vacancy_url,
-        image_url=image_url
-    )
+    return {
+        'title': title,
+        'experience': experience,
+        'address': address,
+        'url': vacancy_url,
+        'image_url': image_url
+    }
 
 
 def scrolling_news(bot, update, user_data):
@@ -708,7 +745,8 @@ def airport_question(update, city):
 
 
 def stop(bot, update):
-    update.message.reply_text('Бля конец')
+    update.message.reply_text('Пока!', reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text('Для того, чтобы начать работу с ботом заново напишите /start')
     return ConversationHandler.END
 
 
