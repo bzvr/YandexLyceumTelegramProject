@@ -479,7 +479,6 @@ def location_handler(bot, update, user_data):
             if reply['address'] == 'Адрес не указан':
                 _keyboard.pop(1)
 
-            update.message.reply_text('Найдено несколько вакансий', reply_markup=ReplyKeyboardRemove())
             update.message.reply_text(
                 (
                     '*{title}*\n'
@@ -592,7 +591,10 @@ def form_vacancy_reply(user_data, add_location_image=False):
     experience = vacancy['experience']['name']
     address = vacancy['address']
     if address is not None:
-        address = address['city'] + ', ' + address['street'] + ' ' + address['building']
+        try:
+            address = address['city'] + ', ' + address['street'] + ' ' + address['building']
+        except TypeError:
+            address = 'Адрес не указан'
     else:
         address = 'Адрес не указан'
 
