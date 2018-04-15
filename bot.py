@@ -31,60 +31,60 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
-keyboard1 = [['Пропустить']]
-keyboard2 = [['Показать на карте'], ['Последние новости'], ['Погода'], ['Расписания'], ['Вакансии'],
-             ['Вернуться назад']]
-keyboard3 = [['Вернуться назад']]
-keyboard4 = [['Текущая погода'], ['Прогноз на 6 дней'], ['Вернуться назад']]
-keyboard5 = [['Найти авиарейс'], ['Вернуться назад']]
-keyboard6 = [['Поиск на карте'], ['Показать текущий профиль вакансий'], ['Настройки профиля вакансий']]
-keyboard7 = [['Настройка специализации'], ['Настройка ключевых слов'], ['Настройка региона'], ['Вернуться назад']]
+keyboard1 = [['↪️Пропустить']]
+keyboard2 = [['🗺Показать на карте'], ['🗞Последние новости'], ['🌧Погода'], ['🛩Расписания'], ['💸Вакансии'],
+             ['🔙Вернуться назад']]
+keyboard3 = [['🔙Вернуться назад']]
+keyboard4 = [['🌤Текущая погода'], ['☔️Прогноз на 6 дней'], ['🔙Вернуться назад']]
+keyboard5 = [['✈️Найти авиарейс'], ['🔙Вернуться назад']]
+keyboard6 = [['📚Сервисы для города'], ['👤Показать текущий профиль вакансий'], ['⚙Настройки профиля вакансий']]
+keyboard7 = [['📋Настройка специализации'], ['🔠Настройка ключевых слов'], ['🌆Настройка города'], ['🔙Вернуться назад']]
 
 inline_news_state1 = InlineKeyboardMarkup(
-    [[InlineKeyboardButton('Следующая новость', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
+    [[InlineKeyboardButton('Следующая новость▶️', callback_data=1)], [InlineKeyboardButton('🔙Назад', callback_data=3)]])
 
 inline_news_state2 = InlineKeyboardMarkup([
-    [InlineKeyboardButton('Предыдущая новость', callback_data=2),
-     InlineKeyboardButton('Следующая новость', callback_data=1)],
-    [InlineKeyboardButton('Назад', callback_data=3)]
+    [InlineKeyboardButton('◀️Предыдущая новость', callback_data=2),
+     InlineKeyboardButton('Следующая новость▶️', callback_data=1)],
+    [InlineKeyboardButton('🔙Назад', callback_data=3)]
 ])
 
 inline_news_state3 = InlineKeyboardMarkup([
-    [InlineKeyboardButton('Предыдущая новость', callback_data=2)],
-    [InlineKeyboardButton('Назад', callback_data=3)]
+    [InlineKeyboardButton('◀️Предыдущая новость', callback_data=2)],
+    [InlineKeyboardButton('🔙Назад', callback_data=3)]
 ])
 
 inline_maps = InlineKeyboardMarkup([
-    [InlineKeyboardButton('Карта', callback_data='map')],
-    [InlineKeyboardButton('Спутник', callback_data='sat')],
-    [InlineKeyboardButton('Гибрид', callback_data='sat,skl')],
+    [InlineKeyboardButton('🗺Карта', callback_data='map')],
+    [InlineKeyboardButton('🛰Спутник', callback_data='sat')],
+    [InlineKeyboardButton('🗺➕🛰Гибрид', callback_data='sat,skl')],
 ])
 
 inline_sch_state1 = InlineKeyboardMarkup(
-    [[InlineKeyboardButton('Следующий рейс', callback_data=1)], [InlineKeyboardButton('Назад', callback_data=3)]])
+    [[InlineKeyboardButton('Следующий рейс▶️', callback_data=1)], [InlineKeyboardButton('🔙Назад', callback_data=3)]])
 
 inline_sch_state2 = InlineKeyboardMarkup([
-    [InlineKeyboardButton('Предыдущий рейс', callback_data=2),
-     InlineKeyboardButton('Следующий рейс', callback_data=1)],
-    [InlineKeyboardButton('Назад', callback_data=3)]
+    [InlineKeyboardButton('◀️Предыдущий рейс', callback_data=2),
+     InlineKeyboardButton('Следующий рейс▶️', callback_data=1)],
+    [InlineKeyboardButton('🔙Назад', callback_data=3)]
 ])
 
 inline_sch_state3 = InlineKeyboardMarkup([
-    [InlineKeyboardButton('Предыдущий рейс', callback_data=2)],
-    [InlineKeyboardButton('Назад', callback_data=3)]
+    [InlineKeyboardButton('⏮Предыдущий рейс', callback_data=2)],
+    [InlineKeyboardButton('🔙Назад', callback_data=3)]
 ])
 
 
 def start(bot, update):
     update.message.reply_text(
-        'Введите свое имя', reply_markup=ReplyKeyboardMarkup(keyboard1), one_time_keyboard=False)
+        'Как Вас зовут?', reply_markup=ReplyKeyboardMarkup(keyboard1), one_time_keyboard=False)
 
     return ENTER_NAME
 
 
 def enter_name(bot, update, user_data):
     name = update.message.text
-    if name != 'Пропустить':
+    if name != '↪️Пропустить':
         user_data['username'] = name
     else:
         user_data['username'] = None
@@ -97,21 +97,21 @@ def enter_name(bot, update, user_data):
         'keywords': None
     }
 
-    update.message.reply_text('Введите свое местоположение')
+    update.message.reply_text('В каком городе Вы живете?')
     return ENTER_LOCATION
 
 
 def enter_location(bot, update, user_data):
     location = update.message.text
 
-    if location != 'Пропустить':
+    if location != '↪️Пропустить':
         user_data['location'] = location
 
         suggests = region_suggest(location)
         user_data['region_suggests'] = suggests
 
         if len(suggests) != 0:
-            location_keyboard = [['Пропустить']]
+            location_keyboard = [['↪️Пропустить']]
             for suggestion in suggests:
                 location_keyboard.append([suggestion])
 
@@ -124,7 +124,7 @@ def enter_location(bot, update, user_data):
             return LOCATION_APPLY
 
         update.message.reply_text(
-            'Данная местнось не найдена в базе регионов.'
+            'Данный город не найдена в базе регионов.'
         )
 
     else:
@@ -144,10 +144,10 @@ def location_apply(bot, update, user_data):
         user_data['vacancy']['region_name'] = text
         user_data['vacancy']['region_id'] = user_data['region_suggests'][text]
         update.message.reply_text(
-            'Регион успешно установлен!'
+            'Город успешно установлен!'
         )
 
-    elif text != 'Пропустить':
+    elif text != '↪️Пропустить':
         update.message.reply_text(
             'Введенный текст не является ни одним из перечисленных регионов.\n'
             'Попробуйте ввести название региона ещё раз.'
@@ -162,20 +162,20 @@ def location_apply(bot, update, user_data):
 def main_menu(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Поиск на карте':
+    if text == '📚Сервисы для города':
         update.message.reply_text(
-            'Введите местность, информацию о которой Вы хотите узнать',
+            'Введите город, информацию о котором Вы хотите узнать',
             reply_markup=ReplyKeyboardMarkup(keyboard3)
         )
         return SEARCH_HANDLER
 
-    elif text == 'Показать текущий профиль вакансий':
+    elif text == '👤Показать текущий профиль вакансий':
         region = user_data['vacancy']['region_name']
         if region is None:
             if user_data['location'] is None:
                 region = 'Не указано'
             else:
-                region = 'Указанный регион не найден в базе данных HeadHunter'
+                region = 'Указанный город не найден в базе данных HeadHunter'
 
         spec = user_data['vacancy']['specialization_name']
         if spec is None: spec = 'Не указано'
@@ -184,14 +184,14 @@ def main_menu(bot, update, user_data):
         if keywords is None: keywords = 'Не указано'
 
         update.message.reply_text(
-            'Регион: {}\n'
+            'Город: {}\n'
             'Специализация: {}\n'
             'Ключевые слова: {}\n'.format(
                 region, spec, keywords
             )
         )
 
-    elif text == 'Настройки профиля вакансий':
+    elif text == '⚙Настройки профиля вакансий':
         update.message.reply_text(
             'Выберите параметры, которые Вы хотите настроить',
             reply_markup=ReplyKeyboardMarkup(keyboard7)
@@ -204,7 +204,7 @@ def main_menu(bot, update, user_data):
 def profile_config(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Настройка специализации':
+    if text == '📋Настройка специализации':
         update.message.reply_text(
             'Введите название специализации.\n'
             'Бот попробует найти схожие специализации в базе данных HeadHunter.',
@@ -212,18 +212,19 @@ def profile_config(bot, update, user_data):
         )
         return SPECIALIZATION_CONFIG
 
-    elif text == 'Настройка ключевых слов':
+    elif text == '🔠Настройка ключевых слов':
         update.message.reply_text(
             'Введите ключевые слова, которые будут использоваться при поиске вакансий',
             reply_markup=ReplyKeyboardMarkup(keyboard3)
         )
         return KEYWORDS_CONFIG
 
-    elif text == 'Настройка региона':
-        update.message.reply_text('Введите свое местоположение', reply_markup=ReplyKeyboardMarkup(keyboard1))
+    elif text == '🌆Настройка города':
+        update.message.reply_text('Введите город, в котором ищите вакансию',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard1))
         return ENTER_LOCATION
 
-    elif text == 'Вернуться назад':
+    elif text == '🔙Вернуться назад':
         update.message.reply_text('Что Вы хотите сделать?', reply_markup=ReplyKeyboardMarkup(keyboard6))
         return MAIN_MENU
 
@@ -234,7 +235,7 @@ def specialization_config(bot, update, user_data):
     text = update.message.text
     suggests = specialization_suggest(text)
 
-    if text == 'Вернуться назад':
+    if text == '🔙Вернуться назад':
         update.message.reply_text(
             'Возвращаемся в меню настроек',
             reply_markup=ReplyKeyboardMarkup(keyboard7)
@@ -244,7 +245,7 @@ def specialization_config(bot, update, user_data):
     if len(suggests) != 0:
         user_data['spec_suggests'] = suggests
 
-        spec_keyboard = [['Вернуться назад']]
+        spec_keyboard = [['🔙Вернуться назад']]
         for suggestion in suggests:
             spec_keyboard.append([suggestion])
 
@@ -275,7 +276,7 @@ def specialization_apply(bot, update, user_data):
         )
         return PROFILE_CONFIG
 
-    elif text == 'Вернуться назад':
+    elif text == '🔙Вернуться назад':
         update.message.reply_text(
             'Возвращаемся в меню настроек',
             reply_markup=ReplyKeyboardMarkup(keyboard7)
@@ -295,7 +296,7 @@ def keywords_config(bot, update, user_data):
     text = update.message.text
     suggests = keywords_suggest(text)
 
-    if text == 'Вернуться назад':
+    if text == '🔙Вернуться назад':
         update.message.reply_text(
             'Возвращаемся в меню настроек',
             reply_markup=ReplyKeyboardMarkup(keyboard7)
@@ -305,7 +306,7 @@ def keywords_config(bot, update, user_data):
     if len(suggests) != 0:
         user_data['keywords_suggests'] = suggests
 
-        keywords_keyboard = [['Вернуться назад']]
+        keywords_keyboard = [['🔙Вернуться назад']]
         for suggestion in suggests:
             keywords_keyboard.append([suggestion])
 
@@ -337,7 +338,7 @@ def keywords_apply(bot, update, user_data):
         )
         return PROFILE_CONFIG
 
-    elif text == 'Вернуться назад':
+    elif text == '🔙Вернуться назад':
         update.message.reply_text(
             'Возвращаемся в меню настроек',
             reply_markup=ReplyKeyboardMarkup(keyboard7)
@@ -356,9 +357,9 @@ def keywords_apply(bot, update, user_data):
 def search_handler(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Вернуться назад':
+    if text == '🔙Вернуться назад':
         update.message.reply_text(
-            'Возвражаемся в главное меню',
+            'Возвращаемся в главное меню',
             reply_markup=ReplyKeyboardMarkup(keyboard6)
         )
         return MAIN_MENU
@@ -367,13 +368,15 @@ def search_handler(bot, update, user_data):
 
     if check_response(response):
         update.message.reply_text(
-            'Найдено местоположение',
+            'Город определен',
             reply_markup=ReplyKeyboardMarkup(keyboard2)
         )
+        update.message.reply_text('Выберите одну из возможных функций для данного города:',
+                                  reply_markup=ReplyKeyboardMarkup(keyboard2))
 
         user_data['current_response'] = response
         return LOCATION_HANDLER
-    update.message.reply_text('По данному адресу ничего не найдено.')
+    update.message.reply_text('Заданный город не найден.')
 
     return SEARCH_HANDLER
 
@@ -388,10 +391,10 @@ def voice_to_text(bot, update, user_data):
 
     if check_response(data):
         update.message.reply_text(
-            'Найдено местоположение',
+            'Город определен',
             reply_markup=ReplyKeyboardMarkup(keyboard2)
         )
-        update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
+        update.message.reply_text('Выберите одну из возможных функций для данного города:',
                                   reply_markup=ReplyKeyboardMarkup(keyboard2))
 
         user_data['current_response'] = data
@@ -405,18 +408,18 @@ def voice_to_text(bot, update, user_data):
 def location_handler(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Показать на карте':
+    if text == '🗺Показать на карте':
         res = "[​​​​​​​​​​​]({}){}".format(get_static_map(user_data),
                                            'Карта для города ' + get_city(user_data['current_response'], 'ru-RU'))
         update.message.reply_text(res, parse_mode='markdown', reply_markup=inline_maps)
 
-    elif text == 'Последние новости':
+    elif text == '🗞Последние новости':
         news = parse_news(user_data['current_response'])
         if news is not None:
             user_data['array'] = news
             user_data['index'] = 0
             user_data['length'] = len(news)
-            update.message.reply_text('Найдено новостей для данного местоположения: {}'.format(len(news)),
+            update.message.reply_text('Найдено новостей в заданном городе: {}'.format(len(news)),
                                       reply_markup=ReplyKeyboardRemove())
             update.message.reply_text('*{0}*\n{1}\n[Подробнее:]({2})'.format(*news[0]), parse_mode='markdown',
                                       reply_markup=inline_news_state1)
@@ -425,46 +428,79 @@ def location_handler(bot, update, user_data):
         else:
             update.message.reply_text('Новостей для этой местности не найдено')
 
-    elif text == 'Погода':
+    elif text == '🌧Погода':
         update.message.reply_text(
             'Что вы хотите узнать о погоде в городе {}?'.format(get_city(user_data['current_response'], 'ru-RU')),
             reply_markup=ReplyKeyboardMarkup(keyboard4))
         return WEATHER_HANDLER
 
-    elif text == 'Расписания':
+    elif text == '🛩Расписания':
         update.message.reply_text(
             'Выберите один из вариантов поиска:',
             reply_markup=ReplyKeyboardMarkup(keyboard5))
         return RASP_HANDLER
 
-    elif text == 'Вакансии':
+    elif text == '💸Вакансии':
         try:
             data = geocoder_request(geocode=get_city(user_data['current_response']), format='json')
             city = get_city(data, 'ru_RU')
             region = list(region_suggest(city).items())[0][1]
 
+        except:
+            update.message.reply_text(
+                'Данный город не найден в базе данных HeadHunter.',
+                reply_markup=ReplyKeyboardMarkup(keyboard2)
+            )
+            return LOCATION_HANDLER
+
+        try:
             user_data['vacancies_response'] = vacancies_request(area=region)['items']
+            if len(user_data['vacancies_response']) == 0:
+                update.message.reply_text(
+                    'Для данного города не найдено ни одной вакансии.',
+                    reply_markup=ReplyKeyboardMarkup(keyboard2)
+                )
+                return LOCATION_HANDLER
+
             user_data['vacancies_index'] = 0
-            user_data['vacancies_image'] = 'location'
+            user_data['vacancies_image'] = 'logo'
 
             update.message.reply_text('Найдено несколько вакансий', reply_markup=ReplyKeyboardRemove())
+            _keyboard = [
+                [InlineKeyboardButton('Следующая вакансия▶️', callback_data=1)],
+                [InlineKeyboardButton('🗺Местоположение', callback_data=4)],
+                [InlineKeyboardButton('🔙Назад', callback_data=3)]
+            ]
+
+            if len(user_data['vacancies_response']) == 1:
+                _keyboard.pop(0)
+
+            reply = form_vacancy_reply(user_data)
+            if reply['address'] == 'Адрес не указан':
+                _keyboard.pop(1)
+
             update.message.reply_text(
-                form_vacancy_reply(user_data),
+                (
+                    '*{title}*\n'
+                    '{experience}\n'
+                    '{address}\n'
+                    '[Подробнее:]({url})\n'
+                    '[​​​​​​​​​​​]({image_url})'  # EMPTY STRING IN BRACKETS
+                ).format(**reply),
                 parse_mode='markdown',
-                reply_markup=InlineKeyboardMarkup([
-                    [InlineKeyboardButton('Следующая вакансия', callback_data=1)],
-                    [InlineKeyboardButton('Местоположение', callback_data=4)],
-                    [InlineKeyboardButton('Назад', callback_data=3)]
-                ])
+                reply_markup=InlineKeyboardMarkup(_keyboard)
             )
 
             return VACANCIES_HANDLER
 
         except Exception as e:
-            print(e)
+            logger.exception(e)
 
-    elif text == 'Вернуться назад':
-        update.message.reply_text('Введите какое-либо местоположение', reply_markup=ReplyKeyboardRemove())
+    elif text == '🔙Вернуться назад':
+        update.message.reply_text(
+            'Введите город, информацию о котором Вы хотите узнать',
+            reply_markup=ReplyKeyboardMarkup(keyboard3)
+        )
         return SEARCH_HANDLER
 
     return LOCATION_HANDLER
@@ -504,36 +540,47 @@ def scrolling_vacancy(bot, update, user_data):
         keyboard = [
             [],
             [],
-            [InlineKeyboardButton('Назад', callback_data=3)]
+            [InlineKeyboardButton('🔙Назад', callback_data=3)]
         ]
 
         if user_data['vacancies_index'] != 0:
             keyboard[0].append(InlineKeyboardButton(
-                'Предыдущая вакансия', callback_data=2
+                '◀️Предыдущая вакансия', callback_data=2
             ))
 
         if user_data['vacancies_index'] != len(user_data['vacancies_response']) - 1:
             keyboard[0].append(InlineKeyboardButton(
-                'Следующая вакансия', callback_data=1
+                'Следующая вакансия▶️', callback_data=1
             ))
 
-        if user_data['vacancies_image'] == 'location':
-            keyboard[1].append(InlineKeyboardButton('Логотип', callback_data=5))
-        else:
-            keyboard[1].append(InlineKeyboardButton('Местоположение', callback_data=4))
+        reply = form_vacancy_reply(
+            user_data,
+            user_data['vacancies_image'] == 'location'
+        )
+
+        if reply['address'] != 'Адрес не указан':
+            if user_data['vacancies_image'] == 'location':
+                keyboard[1].append(InlineKeyboardButton('🎫Логотип', callback_data=5))
+            else:
+                keyboard[1].append(InlineKeyboardButton('🗺Местоположение', callback_data=4))
 
         bot.edit_message_text(
             chat_id=query.message.chat_id,
             message_id=query.message.message_id,
-            text=form_vacancy_reply(user_data, user_data['vacancies_image'] == 'location'),
+            text=(
+                '*{title}*\n'
+                '{experience}\n'
+                '{address}\n'
+                '[​​​​​​​​​​​]({image_url})'  # EMPTY STRING IN BRACKETS
+                '[Подробнее:]({url})\n'
+            ).format(**reply),
             reply_markup=InlineKeyboardMarkup(keyboard),
             parse_mode='markdown'
         )
 
         return VACANCIES_HANDLER
     except Exception as e:
-        print(e)
-        raise
+        logger.exception(e)
 
 
 def form_vacancy_reply(user_data, add_location_image=False):
@@ -544,7 +591,10 @@ def form_vacancy_reply(user_data, add_location_image=False):
     experience = vacancy['experience']['name']
     address = vacancy['address']
     if address is not None:
-        address = address['city'] + ', ' + address['street'] + ' ' + address['building']
+        try:
+            address = address['city'] + ', ' + address['street'] + ' ' + address['building']
+        except TypeError:
+            address = 'Адрес не указан'
     else:
         address = 'Адрес не указан'
 
@@ -569,17 +619,13 @@ def form_vacancy_reply(user_data, add_location_image=False):
         else:
             image_url = ''
 
-    return (
-        '*{title}*\n'
-        '{experience}\n'
-        '{address}\n'
-        '[​​​​​​​​​​​]({image_url})'  # EMPTY STRING IN BRACKETS
-        '[Подробнее:]({url})\n'
-    ).format(
-        title=title, experience=experience,
-        address=address, url=vacancy_url,
-        image_url=image_url
-    )
+    return {
+        'title': title,
+        'experience': experience,
+        'address': address,
+        'url': vacancy_url,
+        'image_url': image_url
+    }
 
 
 def scrolling_news(bot, update, user_data):
@@ -622,24 +668,24 @@ def choosing_map_type(bot, update, user_data):
 
 def enter_the_map(bot, update):
     text = update.message.text
-    if text == 'Вернуться назад':
+    if text == '🔙Вернуться назад':
         return LOCATION_HANDLER
 
 
 def weather(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Текущая погода':
+    if text == '🌤Текущая погода':
         city, code = get_city(user_data['current_response']), get_country_code(user_data['current_response'])
         update.message.reply_text(
             get_current_weather(city, code, WEATHER_TOKEN, get_city(user_data['current_response'], 'ru-RU')))
 
-    elif text == 'Прогноз на 6 дней':
+    elif text == '☔️Прогноз на 6 дней':
         city, code = get_city(user_data['current_response']), get_country_code(user_data['current_response'])
         update.message.reply_text(
             get_forecast_weather(city, code, WEATHER_TOKEN, get_city(user_data['current_response'], 'ru-RU')))
 
-    elif text == 'Вернуться назад':
+    elif text == '🔙Вернуться назад':
         update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
                                   reply_markup=ReplyKeyboardMarkup(keyboard2))
 
@@ -649,7 +695,7 @@ def weather(bot, update, user_data):
 def schedule(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Найти авиарейс':
+    if text == '✈️Найти авиарейс':
         city_ru, city_en = get_city(user_data['current_response'], 'ru_RU'), get_city(user_data['current_response'])
         airports = airs.get(city_ru, []) + airs.get(city_en, [])
 
@@ -661,7 +707,7 @@ def schedule(bot, update, user_data):
             update.message.reply_text(
                 'В заданном городе аэропорта не найдено')
 
-    elif text == 'Вернуться назад':
+    elif text == '🔙Вернуться назад':
         update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
                                   reply_markup=ReplyKeyboardMarkup(keyboard2))
 
@@ -671,13 +717,13 @@ def schedule(bot, update, user_data):
 def set_second_city(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Вернуться назад':
+    if text == '🔙Вернуться назад':
         update.message.reply_text(
             'Выберите один из вариантов поиска:',
             reply_markup=ReplyKeyboardMarkup(keyboard5))
         return RASP_HANDLER
 
-    elif text == 'Вернуться в меню':
+    elif text == '🔚Вернуться в меню':
         update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
                                   reply_markup=ReplyKeyboardMarkup(keyboard2))
 
@@ -686,19 +732,19 @@ def set_second_city(bot, update, user_data):
     else:
         user_data['airport1'] = text.split(', ')[-1]
         update.message.reply_text('Введите город пункта назначения:',
-                                  reply_markup=ReplyKeyboardMarkup(keyboard3 + [['Вернуться в меню']]))
+                                  reply_markup=ReplyKeyboardMarkup(keyboard3 + [['🔚Вернуться в меню']]))
         return SET_SECOND_AIRPORT_HANDLER
 
 
 def set_second_airport(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Вернуться назад':
+    if text == '🔙Вернуться назад':
         city_ru, city_en = get_city(user_data['current_response'], 'ru_RU'), get_city(user_data['current_response'])
         airport_question(update, city_ru, city_en)
         return SET_SECOND_CITY_HANDLER
 
-    elif text == 'Вернуться в меню':
+    elif text == '🔚Вернуться в меню':
         update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
                                   reply_markup=ReplyKeyboardMarkup(keyboard2))
 
@@ -715,8 +761,8 @@ def set_second_airport(bot, update, user_data):
                 return SET_SECOND_AIRPORT_HANDLER
             update.message.reply_text('Выберите аэропорт прибытия:',
                                       reply_markup=ReplyKeyboardMarkup(
-                                          [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад'],
-                                                                                               ['Вернуться в меню']]))
+                                          [[elem[1] + ', ' + elem[0]] for elem in airports] + [['🔙Вернуться назад'],
+                                                                                               ['🔚Вернуться в меню']]))
             return FIND_FLIGHTS_HANDLER
         update.message.reply_text('Введеный город не найден. Проверьте написание.')
 
@@ -724,12 +770,12 @@ def set_second_airport(bot, update, user_data):
 def find_flights(bot, update, user_data):
     text = update.message.text
 
-    if text == 'Вернуться назад':
+    if text == '🔙Вернуться назад':
         city_ru, city_en = get_city(user_data['current_response'], 'ru_RU'), get_city(user_data['current_response'])
         airport_question(update, city_ru, city_en)
         return SET_SECOND_CITY_HANDLER
 
-    elif text == 'Вернуться в меню':
+    elif text == '🔚Вернуться в меню':
         update.message.reply_text('Выберите одну из возможных функций для данного местоположения:',
                                   reply_markup=ReplyKeyboardMarkup(keyboard2))
 
@@ -772,8 +818,8 @@ def scrolling_flights(bot, update, user_data):
         bot.sendMessage(text='Из какого аэропорта города {} вы хотите найти рейс?'.format(city_ru),
                         chat_id=query.message.chat_id,
                         reply_markup=ReplyKeyboardMarkup(
-                            [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад'],
-                                                                                 ['Вернуться в меню']]))
+                            [[elem[1] + ', ' + elem[0]] for elem in airports] + [['🔙Вернуться назад'],
+                                                                                 ['🔚Вернуться в меню']]))
         return SET_SECOND_CITY_HANDLER
 
     try:
@@ -793,12 +839,13 @@ def airport_question(update, city_ru, city_en):
     airports = airs.get(city_ru, []) + airs.get(city_en, [])
     update.message.reply_text('Из какого аэропорта города {} вы хотите найти рейс?'.format(city_ru),
                               reply_markup=ReplyKeyboardMarkup(
-                                  [[elem[1] + ', ' + elem[0]] for elem in airports] + [['Вернуться назад'],
-                                                                                       ['Вернуться в меню']]))
+                                  [[elem[1] + ', ' + elem[0]] for elem in airports] + [['🔙Вернуться назад'],
+                                                                                       ['🔚Вернуться в меню']]))
 
 
 def stop(bot, update):
-    update.message.reply_text('Бля конец')
+    update.message.reply_text('Пока!', reply_markup=ReplyKeyboardRemove())
+    update.message.reply_text('Для того, чтобы начать работу с ботом заново напишите /start')
     return ConversationHandler.END
 
 
