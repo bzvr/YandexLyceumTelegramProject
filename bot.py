@@ -17,7 +17,7 @@ from schedule_api.schedule import get_flights
 from speech_api.speech_analyze import speech_analyze
 from speech_api.xml_parser import speech_parser
 
-from headhunter_api.suggestions import specialization_suggest, keywords_suggest, region_suggest
+from headhunter_api.suggestions import keywords_suggest, region_suggest
 from headhunter_api import vacancies_request, full_vacancy_request
 
 from config import TELEGRAM_TOKEN, SPEECH_TOKEN, WEATHER_TOKEN
@@ -38,7 +38,7 @@ keyboard3 = [['🔙Вернуться назад']]
 keyboard4 = [['🌤Текущая погода'], ['☔️Прогноз на 6 дней'], ['🔙Вернуться назад']]
 keyboard5 = [['✈️Найти авиарейс'], ['🔙Вернуться назад']]
 keyboard6 = [['📚Сервисы для города'], ['👤Показать текущий профиль вакансий'], ['⚙Настройки профиля вакансий']]
-keyboard7 = [['📋Настройка специализации'], ['🔠Настройка ключевых слов'], ['🌆Настройка города'], ['🔙Вернуться назад']]
+keyboard7 = [['🔠Настройка ключевых слов'], ['🌆Настройка города'], ['🔙Вернуться назад']]
 
 inline_news_state1 = InlineKeyboardMarkup(
     [[InlineKeyboardButton('Следующая новость▶️', callback_data=1)], [InlineKeyboardButton('🔙Назад', callback_data=3)]])
@@ -92,8 +92,6 @@ def enter_name(bot, update, user_data):
     user_data['vacancy'] = {
         'region_name': None,
         'region_id': None,
-        'specialization_name': None,
-        'specialization_id': None,
         'keywords': None
     }
 
@@ -177,17 +175,13 @@ def main_menu(bot, update, user_data):
             else:
                 region = 'Указанный город не найден в базе данных HeadHunter'
 
-        spec = user_data['vacancy']['specialization_name']
-        if spec is None: spec = 'Не указано'
-
         keywords = user_data['vacancy']['keywords']
         if keywords is None: keywords = 'Не указано'
 
         update.message.reply_text(
             'Город: {}\n'
-            'Специализация: {}\n'
             'Ключевые слова: {}\n'.format(
-                region, spec, keywords
+                region, keywords
             )
         )
 
@@ -204,15 +198,7 @@ def main_menu(bot, update, user_data):
 def profile_config(bot, update, user_data):
     text = update.message.text
 
-    if text == '📋Настройка специализации':
-        update.message.reply_text(
-            'Введите название специализации.\n'
-            'Бот попробует найти схожие специализации в базе данных HeadHunter.',
-            reply_markup=ReplyKeyboardMarkup(keyboard3)
-        )
-        return SPECIALIZATION_CONFIG
-
-    elif text == '🔠Настройка ключевых слов':
+    if text == '🔠Настройка ключевых слов':
         update.message.reply_text(
             'Введите ключевые слова, которые будут использоваться при поиске вакансий',
             reply_markup=ReplyKeyboardMarkup(keyboard3)
@@ -229,67 +215,6 @@ def profile_config(bot, update, user_data):
         return MAIN_MENU
 
     return PROFILE_CONFIG
-
-
-def specialization_config(bot, update, user_data):
-    text = update.message.text
-    suggests = specialization_suggest(text)
-
-    if text == '🔙Вернуться назад':
-        update.message.reply_text(
-            'Возвращаемся в меню настроек',
-            reply_markup=ReplyKeyboardMarkup(keyboard7)
-        )
-        return PROFILE_CONFIG
-
-    if len(suggests) != 0:
-        user_data['spec_suggests'] = suggests
-
-        spec_keyboard = [['🔙Вернуться назад']]
-        for suggestion in suggests:
-            spec_keyboard.append([suggestion])
-
-        update.message.reply_text(
-            'Бот нашел несколько схожих специализаций. Выберите одну из них',
-            reply_markup=ReplyKeyboardMarkup(spec_keyboard)
-        )
-
-        return SPECIALIZATION_APPLY
-
-    else:
-        update.message.reply_text(
-            'Не нашлось специализаций, схожих с введенной.\n'
-            'Попробуйте ввести специализацию еще раз.'
-        )
-        return SPECIALIZATION_CONFIG
-
-
-def specialization_apply(bot, update, user_data):
-    text = update.message.text
-
-    if text in user_data['spec_suggests']:
-        user_data['vacancy']['specialization_name'] = text
-        user_data['vacancy']['specialization_id'] = user_data['spec_suggests'][text]
-        update.message.reply_text(
-            'Специализация успешно установлена! Возвращаемся в меню настроек',
-            reply_markup=ReplyKeyboardMarkup(keyboard7)
-        )
-        return PROFILE_CONFIG
-
-    elif text == '🔙Вернуться назад':
-        update.message.reply_text(
-            'Возвращаемся в меню настроек',
-            reply_markup=ReplyKeyboardMarkup(keyboard7)
-        )
-        return PROFILE_CONFIG
-
-    else:
-        update.message.reply_text(
-            'Введенный текст не является ни одной из перечисленных специализаций.\n'
-            'Попробуйте ввести название специализации ещё раз.'
-        )
-
-    return SPECIALIZATION_APPLY
 
 
 def keywords_config(bot, update, user_data):
@@ -866,12 +791,11 @@ def main():
 
 (
     ENTER_NAME, ENTER_LOCATION, SEARCH_HANDLER, LOCATION_HANDLER,
-    LOCATION_APPLY, MAIN_MENU, PROFILE_CONFIG, SPECIALIZATION_CONFIG,
-    SPECIALIZATION_APPLY, KEYWORDS_CONFIG, KEYWORDS_APPLY,
+    LOCATION_APPLY, MAIN_MENU, PROFILE_CONFIG, KEYWORDS_CONFIG, KEYWORDS_APPLY,
     VACANCIES_HANDLER, NEWS_HANDLER, WEATHER_HANDLER, RASP_HANDLER,
     SET_SECOND_CITY_HANDLER, SET_SECOND_AIRPORT_HANDLER,
     FIND_FLIGHTS_HANDLER
-) = range(18)
+) = range(16)
 
 conversation_handler = ConversationHandler(
     entry_points=[CommandHandler('start', start)],
@@ -884,9 +808,6 @@ conversation_handler = ConversationHandler(
         MAIN_MENU: [MessageHandler(Filters.text, main_menu, pass_user_data=True)],
 
         PROFILE_CONFIG: [MessageHandler(Filters.text, profile_config, pass_user_data=True)],
-
-        SPECIALIZATION_CONFIG: [MessageHandler(Filters.text, specialization_config, pass_user_data=True)],
-        SPECIALIZATION_APPLY: [MessageHandler(Filters.text, specialization_apply, pass_user_data=True)],
 
         KEYWORDS_CONFIG: [MessageHandler(Filters.text, keywords_config, pass_user_data=True)],
         KEYWORDS_APPLY: [MessageHandler(Filters.text, keywords_apply, pass_user_data=True)],
