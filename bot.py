@@ -379,7 +379,12 @@ def location_handler(bot, update, user_data):
             return LOCATION_HANDLER
 
         try:
-            user_data['vacancies_response'] = vacancies_request(area=region)['items']
+            params = {
+                'area': region
+            }
+            if user_data['vacancy']['keywords'] is not None:
+                params['text'] = user_data['vacancy']['keywords']
+            user_data['vacancies_response'] = vacancies_request(**params)['items']
             if len(user_data['vacancies_response']) == 0:
                 update.message.reply_text(
                     'Для данного города не найдено ни одной вакансии.',
