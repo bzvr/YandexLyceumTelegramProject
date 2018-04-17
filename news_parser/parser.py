@@ -21,7 +21,11 @@ def parse_news(data):
             title = link.text
             href = 'https://news.yandex.ru/story' + link.attrs['href']
 
-            text = story.find('div.story__text')[0].text
+            try:
+                text = story.find('div.story__text')[0].text
+            except IndexError:
+                continue
+
             news.append([title, text, href])
         return news
     else:
