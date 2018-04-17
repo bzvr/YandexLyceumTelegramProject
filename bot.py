@@ -725,6 +725,10 @@ def find_flights(bot, update, user_data):
         user_data['length'] = len(flights)
         update.message.reply_text('Найдено рейсов для данного направления: {}'.format(len(flights)),
                                   reply_markup=ReplyKeyboardRemove())
+        update.message.reply_text(
+            '[Данные предоставлены сервисом Яндекс.Расписания](http://rasp.yandex.ru/)',
+            parse_mode='markdown'
+        )
         update.message.reply_text(flights[0],
                                   reply_markup=inline_sch_state1 if len(flights) > 1 else ReplyKeyboardMarkup(
                                       keyboard3))
