@@ -24,7 +24,7 @@ from os import environ
 # from config import TELEGRAM_TOKEN, SPEECH_TOKEN, WEATHER_TOKEN
 TELEGRAM_TOKEN = environ['telegram']
 SPEECH_TOKEN = environ['speech']
-WEATHER_HANDLER = environ['weather']
+WEATHER_TOKEN = environ['weather']
 
 import logging
 
