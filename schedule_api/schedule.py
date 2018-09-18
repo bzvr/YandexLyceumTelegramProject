@@ -1,5 +1,7 @@
 from schedule_api.airports import airs
-from config import RASP_TOKEN
+from os import environ
+# from config import RASP_TOKEN
+RASP_TOKEN = environ['schedule']
 
 import requests
 
