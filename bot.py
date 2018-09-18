@@ -20,7 +20,11 @@ from speech_api.xml_parser import speech_parser
 from headhunter_api.suggestions import keywords_suggest, region_suggest
 from headhunter_api import vacancies_request, full_vacancy_request
 
-from config import TELEGRAM_TOKEN, SPEECH_TOKEN, WEATHER_TOKEN
+from os import environ
+# from config import TELEGRAM_TOKEN, SPEECH_TOKEN, WEATHER_TOKEN
+TELEGRAM_TOKEN = environ['telegram']
+SPEECH_TOKEN = environ['speech']
+WEATHER_TOKEN = environ['weather']
 
 import logging
 
