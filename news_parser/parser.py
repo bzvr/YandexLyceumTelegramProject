@@ -10,7 +10,7 @@ def parse_news(data):
     response = session.get(url.format(city))
     if response:
         print('page gotten')
-        html = response.html.find(selectors[0])[1]
+        html = response.html.find(selectors[0])[2]
 
         stories = html.find(selectors[1])
 
